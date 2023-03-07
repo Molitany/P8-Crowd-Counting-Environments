@@ -11,7 +11,7 @@ To run the frontend:
 Changes happen live if fast reload is enabled.
 
 ## Backend
-The backend is written in python using FastAPI as a web framework.
+The backend is written in python3.10, as pytorch does not support 3.11 yet, using FastAPI as a web framework.
 You will need to download pytorch yourself as the requirements are dependent on if you have a CUDA card or not and what OS is used. It can be found [here](https://pytorch.org/get-started/locally/).
 
 The database is setup to be postgres with SQLAlchemy as the ORM.
