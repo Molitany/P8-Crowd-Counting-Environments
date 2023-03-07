@@ -5,8 +5,9 @@ Crowd counting to detect dangerous environments
 The frontend is written in React Native using typescript.
 
 To run the frontend:
-1. Install [Expo Go](https://expo.dev/expo-go). 
-2. Start the frontend with `npm start` and scan the QR code with the app. 
+1. Run `npm install` in the frontend folder.
+2. Install [Expo Go](https://expo.dev/expo-go). 
+3. Start the frontend with `npm start` and scan the QR code with the app. 
 
 Changes happen live if fast reload is enabled.
 
