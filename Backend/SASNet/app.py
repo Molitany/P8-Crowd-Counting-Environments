@@ -1,18 +1,7 @@
-# Copyright 2021 Tencent
+# Based on SASNet from Tencent 2021 using the Apache License, Version 2.0
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =============================================================================
 import os
+import cv2
 import numpy as np
 import torch
 import warnings
@@ -60,14 +49,13 @@ def loading_data(img):
     return test_loader
 
 
-def predict(img):
+def predict(img, model_path):
     if img is None:
         return "No image selected", plt.figure()
     """the main process of inference"""
     test_loader = loading_data(img)
     #model = SASNet()
     model = SASNet().cpu()
-    model_path = "./SHHB.pth"
     # load the trained model
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     print('successfully load model from', model_path)
@@ -93,7 +81,33 @@ def predict(img):
             
             return int(np.round(pred_cnt, 0)), fig
 
+def subtract_images(img1_path, img2_path):
+    """
+    Subtract two images from each other while being able to handle images of different sizes. Sparse to dense will create many light areas and the reverse will create darker images.\n
+    Using cv2.subtract to take the difference instead of cv2.absdiff as we want to know the current image and not the reference image and current image.
+    """
+    # read images from path
+    img1 = cv2.imread(img1_path)
+    img2 = cv2.imread(img2_path)
+    # take height and width
+    height1, width1 = img1.shape[0],img1.shape[1]
+    height2, width2 = img2.shape[0],img2.shape[1]    
+    # find minimum of height and widthe
+    min_height = min(height1, height2)
+    min_width = min(width1, width2)
+    # take image pixels until minimum height and width
+    img11 = img1[0:min_height, 0:min_width]
+    img22 = img2[0:min_height, 0:min_width]
+    # subtract the now equal sized images
+    img_sub = cv2.subtract(img11, img22)
+    # convert image to PIL format and convert to PIL image for SASNet
+    img = cv2.cvtColor(img_sub, cv2.COLOR_BGR2RGB)
+    im_pil = Image.fromarray(img)
+    return im_pil
 
-label, fig = predict(Image.open("IMG_2.jpg"))
-print(label)
+sub_img = subtract_images("Crosswalk/frame0.jpg", "Crosswalk/frame100.jpg")
+sub_img.show()
+labelA, fig = predict(sub_img, "SHHA.pth")
+labelB, fig = predict(sub_img, "SHHB.pth")
+print(f"SHHA: {labelA}, SHHB: {labelB}")
 plt.show()
