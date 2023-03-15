@@ -1,0 +1,7 @@
+cameraId, zoneName, density, count
+'0001', 'hallway 1', high, 1200
+'0002', 'hallway 2', low, 12
+'0003', 'entrance', low, 999
+'0004', 'cantina', medium, 111
+'0005', 'shop', too high, 423
+
