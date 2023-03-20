@@ -1,28 +1,24 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, WebSocket
 import pandas as pd
+import time
 
 from app.core.config import settings
 
-class Densities():
-    pass
+print(pd.read_csv('dummydata').to_dict().count[0])
 
-def get_densities():
-    _api = FastAPI(title="density")
-    _api.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app = FastAPI(title='Warning system')
 
-    return _api
-
-api = get_densities()
-
-@app.get("/data")
-async def density():
-    temp = pd.read_csv('dummydata.csv')
-    data = temp.to_dict() 
-    return {"data": data}, 200
+@app.websocket("/density")
+async def count(websocket: WebSocket):
+    print('Accepting client connection....')
+    await websocket.accept()
+    while True:
+        try: 
+            status = pd.read_csv('dummydata').to_dict().count[0]
+            await websocket.send_json(status)
+            time.sleep(1)
+        except Exception as e:
+            print('error', e)
+            break
+    print('bye..\n')
+    
