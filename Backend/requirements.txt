@@ -1,0 +1,6 @@
+manage-fastapi==1.1.1
+fastapi==0.92.0
+uvicorn==0.20.0
+SQLAlchemy==2.0.5.post1
+opencv-python==4.7.0.72
+python-dotenv==1.0.0
