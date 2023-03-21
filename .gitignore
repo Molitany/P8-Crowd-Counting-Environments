@@ -440,3 +440,4 @@ google-services.json
 
 # End of https://www.toptal.com/developers/gitignore/api/reactnative,python,visualstudiocode
 Crosswalk
+vgg*.pth
