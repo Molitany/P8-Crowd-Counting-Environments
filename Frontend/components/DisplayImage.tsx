@@ -3,15 +3,19 @@ import {View, Image, StyleSheet,Text} from 'react-native';
 
 const [serverMessages,setServerMessages] = useState([String])
 const [connectedToServer,setConnectedToserver] = useState(false) 
+const [serverState, setServerState] = useState('Loading...');
 const DisplayImage = () => {
-    var ws = React.useRef(new WebSocket('ws://localhost/8000/density')).current;
-    useEffect(() =>{
+    var ws = React.useRef(new WebSocket('ws://localhost:8000/density')).current;
+    /*useEffect(() =>{
             let serverMessagesList = [String];
             ws.onopen = () => {
                 setConnectedToserver(true);
             }
             ws.onclose = (e) => {
                 setConnectedToserver(false);
+            }
+            ws.onerror = (e) => {
+                setServerState(e.type);
             }
             ws.onmessage = (e) => {
                 serverMessagesList.push(e.data);
@@ -21,7 +25,7 @@ const DisplayImage = () => {
     
     
     
-    )
+    )*/
 
     return (
         <View style={styles.container}>

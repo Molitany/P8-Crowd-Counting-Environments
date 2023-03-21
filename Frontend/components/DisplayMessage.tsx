@@ -2,6 +2,8 @@ import React,{useEffect,useState} from 'react';
 import { StyleSheet, View ,Text,FlatList} from 'react-native';
 
 import message from '../assets/tester.json'
+/*Not used 
+  Kept for now incase it could be repurposed, otherwise might delete later */
 
 type Density = {
     zone: string;
