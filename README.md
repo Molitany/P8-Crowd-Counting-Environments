@@ -21,7 +21,7 @@ To run the backend:
 1. Install the packages with `pip install -r requirements.txt`.
 2. Take the env file from [discord](https://discord.com/channels/1070635395731165184/1070636486040506439) and put it in the backend folder.
 3. Start the web framework with `fastapi run` and go to [localhost:8000](localhost:8000).
-4. P2PNet requires a vgg model in the backend folder to work default is [vgg16_bn](https://download.pytorch.org/models/vgg16_bn-6c64b313.pth) others are available at:
+4. P2PNet requires a vgg model in the weights folder in backent to work default is [vgg16_bn](https://download.pytorch.org/models/vgg16_bn-6c64b313.pth) others are available at:
     - [vgg11](https://download.pytorch.org/models/vgg11-bbd30ac9.pth)  
     - [vgg13](https://download.pytorch.org/models/vgg13-c768596a.pth)  
     - [vgg16](https://download.pytorch.org/models/vgg16-397923af.pth)  

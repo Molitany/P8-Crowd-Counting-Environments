@@ -2,6 +2,7 @@
 """
 Mostly copy-paste from torchvision references.
 """
+import glob
 import torch
 import torch.nn as nn
 
@@ -24,11 +25,7 @@ model_urls = {
 }
 
 
-model_paths = {
-    'vgg16_bn': './vgg16_bn-6c64b313.pth',
-    'vgg16': '/apdcephfs/private_changanwang/checkpoints/vgg16-397923af.pth',
-
-}
+model_paths = glob.glob("**/weights/vgg*.pth", recursive=True)[0]
 
 
 class VGG(nn.Module):
@@ -103,7 +100,7 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, sync=False, **kwargs):
         kwargs['init_weights'] = False
     model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm, sync=sync), **kwargs)
     if pretrained:
-        state_dict = torch.load(model_paths[arch])
+        state_dict = torch.load(model_paths)
         model.load_state_dict(state_dict)
     return model
 

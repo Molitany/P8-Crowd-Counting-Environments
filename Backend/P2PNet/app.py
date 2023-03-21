@@ -1,99 +1,94 @@
-# Copyright 2021 Tencent
+import argparse
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =============================================================================
-import os
-import numpy as np
 import torch
-import warnings
-import random
-import matplotlib.pyplot as plt
 import torchvision.transforms as standard_transforms
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
-from models.p2pnet import P2PNet
+import numpy as np
+
 from PIL import Image
+import cv2
+from engine import *
+from models import build_model
 
-warnings.filterwarnings('ignore')
+def get_args_parser():
+    parser = argparse.ArgumentParser('Set parameters for P2PNet evaluation', add_help=False)
+    
+    # * Backbone
+    parser.add_argument('--backbone', default='vgg16_bn', type=str,
+                        help="name of the convolutional backbone to use")
 
-# define the GPU id to be used
-#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    parser.add_argument('--row', default=2, type=int,
+                        help="row number of anchor points")
+    parser.add_argument('--line', default=2, type=int,
+                        help="line number of anchor points")
 
-class data(Dataset):
-    def __init__(self, img, transform=None):
-        self.image = img
-        self.transform = transform
+    parser.add_argument('--output_dir', default='./logs/',
+                        help='path where to save')
+    parser.add_argument('--weight_path', default='./weights/SHTechA.pth',
+                        help='path where the trained weights saved')
 
-    def __len__(self):
-        return 1000
+    parser.add_argument('--gpu_id', default=0, type=int, help='the gpu used for evaluation')
 
-    def __getitem__(self, x):
-        # open image here as PIL / numpy
-        image = self.image
-        image = image.convert('RGB')
-        if self.transform is not None:
-            image = self.transform(image)
-      
-        image = torch.Tensor(image)
-        return image
+    return parser
 
-def loading_data(img):
-    # the augumentations
+def run(args, img_path):
+    device_name = 'cpu'
+    device = torch.device(device_name) #TODO: add gpu support here
+    # get the P2PNet
+    model = build_model(args)
+    # move to cpu/gpu
+    model.to(device)
+    # load trained model
+    if args.weight_path is not None:
+        checkpoint = torch.load(args.weight_path, map_location=device_name) 
+        model.load_state_dict(checkpoint['model'])
+    # convert to eval mode
+    model.eval()
+    # create the pre-processing transform
     transform = standard_transforms.Compose([
-        standard_transforms.ToTensor(), standard_transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                                      std=[0.229, 0.224, 0.225]),
+        standard_transforms.ToTensor(), 
+        standard_transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    # dcreate  the dataset
-    test_set = data(img=img, transform=transform)
-    test_loader = DataLoader(test_set, batch_size=1, num_workers=0, shuffle=False, drop_last=False)
 
-    return test_loader
+    # load the images
+    img_raw = Image.open(img_path).convert('RGB')
+    # round the size
+    width, height = img_raw.size
+    new_width = width // 128 * 128
+    new_height = height // 128 * 128
+    img_raw = img_raw.resize((new_width, new_height), Image.LANCZOS)
+    # pre-proccessing
+    img = transform(img_raw)
 
+    samples = torch.Tensor(img).unsqueeze(0)
+    samples = samples.to(device)
+    # run inference
+    outputs = model(samples)
+    outputs_scores = torch.nn.functional.softmax(outputs['pred_logits'], -1)[:, :, 1][0]
 
-def predict(img):
-    if img is None:
-        return "No image selected", plt.figure()
-    """the main process of inference"""
-    test_loader = loading_data(img)
-    #model = SASNet()
-    model = P2PNet().cpu()
-    model_path = "./weight/SHTechA.pth"
-    # load the trained model
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    print('successfully load model from', model_path)
+    outputs_points = outputs['pred_points'][0]
 
-    with torch.no_grad():
-        model.eval()
+    threshold = 0.5
+    # filter the predictions
+    points = outputs_points[outputs_scores > threshold].detach().cpu().numpy().tolist()
+    predict_cnt = int((outputs_scores > threshold).sum())
 
-        for vi, data in enumerate(test_loader, 0):
-          img = data
-          #img = img.cuda()
-          img = img.cpu()
-          pred_map = model(img)
-          pred_map = pred_map.data.cpu().numpy()
-          for i_img in range(pred_map.shape[0]):
-            pred_cnt = np.sum(pred_map[i_img]) / 1000
+    outputs_scores = torch.nn.functional.softmax(outputs['pred_logits'], -1)[:, :, 1][0]
 
-            den_map = np.squeeze(pred_map[i_img])
-            fig = plt.figure(frameon=False)
-            ax = plt.Axes(fig, [0., 0., 1., 1.])
-            ax.set_axis_off()
-            fig.add_axes(ax)
-            ax.imshow(den_map, aspect='auto')
-            
-            return int(np.round(pred_cnt, 0)), fig
+    outputs_points = outputs['pred_points'][0]
+    # draw the predictions
+    size = 2
+    img_to_draw = cv2.cvtColor(np.array(img_raw), cv2.COLOR_RGB2BGR)
+    for p in points:
+        img_to_draw = cv2.circle(img_to_draw, (int(p[0]), int(p[1])), size, (0, 0, 255), -1)
+    # save the visualized image
+    return predict_cnt, img_to_draw
+    # cv2.imwrite(os.path.join("./logs/", 'pred{}.jpg'.format(predict_cnt)), img_to_draw)
 
-
-label, fig = predict(Image.open("IMG_1.jpg"))
-print(label)
-plt.show()
+def main(img_path):
+    """
+    Given an image path it runs P2PNet using the vgg model in the P2PNet folder and returns count and img as cv2 array
+    """
+    # arguments are ignored and default are used instead
+    parser = argparse.ArgumentParser('P2PNet evaluation script', parents=[get_args_parser()])
+    args = parser.parse_args()
+    return run(args, img_path)

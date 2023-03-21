@@ -52,10 +52,23 @@ class BackboneBase_VGG(nn.Module):
 class Backbone_VGG(BackboneBase_VGG):
     """ResNet backbone with frozen BatchNorm."""
     def __init__(self, name: str, return_interm_layers: bool):
-        if name == 'vgg16_bn':
-            backbone = models.vgg16_bn(pretrained=True)
-        elif name == 'vgg16':
-            backbone = models.vgg16(pretrained=True)
+        match name:
+            case "vgg11":
+                backbone = models.vgg11(pretrained=True)
+            case "vgg11_bn":
+                backbone = models.vgg11_bn(pretrained=True)
+            case "vgg13":
+                backbone = models.vgg13(pretrained=True)
+            case "vgg13_bn":
+                backbone = models.vgg13_bn(pretrained=True)
+            case "vgg16":
+                backbone = models.vgg16(pretrained=True)
+            case "vgg16_bn":
+                backbone = models.vgg16_bn(pretrained=True)
+            case "vgg19":
+                backbone = models.vgg19(pretrained=True)
+            case "vgg19_bn":
+                backbone = models.vgg19_bn(pretrained=True)
         num_channels = 256
         super().__init__(backbone, num_channels, name, return_interm_layers)
 
