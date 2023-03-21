@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 
+import pandas as pd
+import time
+
 
 def get_application():
     _app = FastAPI(title=settings.PROJECT_NAME)
@@ -28,5 +31,13 @@ async def root():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
+        try: 
+            status = pd.read_csv('app/dummydata.csv').to_dict()
+            await websocket.send_json(status)
+            time.sleep(10)
+        except Exception as e:
+            print('error', e)
+            break
+    print('bye..\n')
+
+

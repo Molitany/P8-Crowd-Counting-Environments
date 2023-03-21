@@ -4,4 +4,3 @@ cameraId, zoneName, density, count
 '0003', 'entrance', low, 999
 '0004', 'cantina', medium, 111
 '0005', 'shop', too high, 423
-

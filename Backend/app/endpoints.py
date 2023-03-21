@@ -13,8 +13,8 @@ async def count(websocket: WebSocket):
     print('Accepting client connection....')
     await websocket.accept()
     while True:
-        try: 
-            status = pd.read_csv('dummydata').to_dict().count[0]
+        try:    
+            status = pd.read_csv('dummydata').to_dict()
             await websocket.send_json(status)
             time.sleep(1)
         except Exception as e:

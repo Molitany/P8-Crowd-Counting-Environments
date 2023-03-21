@@ -5,7 +5,7 @@ const DisplayImage = () => {
     const [serverMessages,setServerMessages] = useState([String]);
     const [connectedToServer,setConnectedToserver] = useState(false) ;
     const [serverState, setServerState] = useState('Loading...');
-    var ws = React.useRef(new WebSocket('ws://localhost:8000/density')).current;
+    const ws = React.useRef(new WebSocket('ws://localhost:8000/density')).current;
     useEffect(() =>{
             let serverMessagesList = [String];
             ws.onopen = () => {
@@ -21,7 +21,7 @@ const DisplayImage = () => {
                 serverMessagesList.push(e.data);
                 setServerMessages([...serverMessagesList])
             };
-        }
+        },[]
     
     )
 
