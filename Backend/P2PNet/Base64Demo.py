@@ -4,8 +4,9 @@ from app import main
 
 # demonstration of conversion to base64 to send over network and conversion back again for fun
 if __name__ == "__main__":
-    count, img = main("Crosswalk/frame0.jpg")
+    count, img = main("ShanghaiTech/part_A_final/test_data/images/IMG_.jpg")
     retval, buffer = cv2.imencode('.jpg', img)
+    print(count)
     img_str = base64.b64encode(buffer).decode("utf-8")
     with open("./storage.txt", "w") as f:
         f.write(img_str)
