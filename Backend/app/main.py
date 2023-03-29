@@ -38,12 +38,10 @@ async def websocket_endpoint(websocket: WebSocket):
         try: 
             with open("app/testPictureK.png", "rb") as image_file:
                 encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                print(encoded_string)
         except Exception as e:
             print('error', e)
             break
         await websocket.send_json({"image" :encoded_string})
-
 
 status = pd.read_csv('app/dummydata.csv').to_dict()
 
