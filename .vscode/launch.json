@@ -9,10 +9,10 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "cwd": "${workspaceFolder}/CrowdCounting-P2PNet",
             "console": "integratedTerminal",
-            "args": ["--weight_path", "./weights/SHTechA.pth", "--output_dir", "./logs/"],
-            "justMyCode": true
+            "justMyCode": true,
+            "args": ["--data_path", "./datas/part_B_final", "--model_path", "./models/SHHB.pth"],
+            "cwd": "${workspaceFolder}/Backend/SASNet_ROOT"
         }
     ]
 }

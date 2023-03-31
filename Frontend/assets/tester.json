@@ -1,0 +1,26 @@
+{
+    "id": "0001",
+    "name": "hallway 1",
+    "density": [
+        {
+            "zone": "1001",
+            "level": "high",
+            "count": "22"
+        },
+        {
+            "zone": "1002",
+            "level": "low",
+            "count": "1"
+        },
+        {
+            "zone": "1003",
+            "level": "low",
+            "count": "0"
+        },
+        {
+            "zone": "1004",
+            "level": "too high",
+            "count": "1000"
+        }
+    ]
+}
