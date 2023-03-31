@@ -8,7 +8,8 @@ from PIL import Image
 import cv2
 from engine import *
 from models import build_model
-
+import os
+get_path = lambda *x : os.path.join(os.path.dirname(__file__),*x)
 def get_args_parser():
     parser = argparse.ArgumentParser('Set parameters for P2PNet evaluation', add_help=False)
     
@@ -38,8 +39,8 @@ def run(args, img_path):
     # move to cpu/gpu
     model.to(device)
     # load trained model
-    if args.weight_path is not None:
-        checkpoint = torch.load(args.weight_path, map_location=device_name) 
+    if get_path('weights/SHTechA.pth') is not None:
+        checkpoint = torch.load(get_path('weights/SHTechA.pth'), map_location=device_name) 
         model.load_state_dict(checkpoint['model'])
     # convert to eval mode
     model.eval()
@@ -81,7 +82,7 @@ def run(args, img_path):
         img_to_draw = cv2.circle(img_to_draw, (int(p[0]), int(p[1])), size, (0, 0, 255), -1)
     # save the visualized image
     return predict_cnt, img_to_draw
-    # cv2.imwrite(os.path.join("./logs/", 'pred{}.jpg'.format(predict_cnt)), img_to_draw)
+     #cv2.imwrite(os.path.join("./logs/", 'pred{}.jpg'.format(predict_cnt)), img_to_draw)
 
 def main(img_path):
     """
@@ -91,3 +92,4 @@ def main(img_path):
     parser = argparse.ArgumentParser('P2PNet evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
     return run(args, img_path)
+
