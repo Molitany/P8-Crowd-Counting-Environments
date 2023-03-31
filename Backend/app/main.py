@@ -42,19 +42,3 @@ async def websocket_endpoint(websocket: WebSocket):
             print('error', e)
             break
         await websocket.send_json({"image" :encoded_string})
-
-status = pd.read_csv('app/dummydata.csv').to_dict()
-
-@app.websocket("/densty")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        try: 
-            await websocket.send_json(status)
-            time.sleep(10)
-        except Exception as e:
-            print('error', e)
-            break
-    print('bye..\n')
-
-

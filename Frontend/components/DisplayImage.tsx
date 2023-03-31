@@ -11,6 +11,7 @@ const DisplayImage = () => {
     const [imageReceived, setImageReceived] = useState(false)
     const [image, setImage] = useState(String);
     const ws = React.useRef(new WebSocket('ws://localhost:8000/density')).current;
+    //useEffect defining what actions happen when the events are triggered. 
     useEffect(() => {
         let serverMessagesList = [String];
         ws.onopen = () => {
@@ -48,6 +49,8 @@ const DisplayImage = () => {
             }
         })
     }*/
+    
+    // Is called in onmessage. Sets Image to the image string.
     const receiveMessage = (js: { image: string }) => {
         /*asyncSetImage(js).then((data: string) => {
             setImage(data)
@@ -56,7 +59,7 @@ const DisplayImage = () => {
         setImage(PNG);
         setImageReceived(true);
     }
-
+    //Only exist to send arbitrary message to server. Likely deleted or changed later.
     const sendToSocket = () => {
         ws.send("Hello World");
     }
