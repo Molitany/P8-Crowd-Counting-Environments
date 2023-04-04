@@ -4,5 +4,11 @@ uvicorn==0.20.0
 SQLAlchemy==2.0.5.post1
 opencv-python==4.7.0.72
 python-dotenv==1.0.0
-websockets==10.4
+tensorboardX==2.6
+easydict==1.10
 pandas==1.5.3
+numpy==1.24.2
+scipy==1.10.1
+matplotlib==3.7.1
+Pillow==9.4.0
+opencv-python==4.7.0.72
