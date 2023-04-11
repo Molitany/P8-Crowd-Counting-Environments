@@ -1,1 +1,1 @@
-from persistent_p2p import PersistentP2P
+from .persistent_p2p import PersistentP2P

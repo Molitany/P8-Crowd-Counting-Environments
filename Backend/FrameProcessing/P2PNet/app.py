@@ -6,8 +6,8 @@ import numpy as np
 
 from PIL import Image
 import cv2
-from engine import *
-from models import build_model
+from .engine import *
+from .models import build_model
 import os
 get_path = lambda *x : os.path.join(os.path.dirname(__file__),*x)
 def get_args_parser():

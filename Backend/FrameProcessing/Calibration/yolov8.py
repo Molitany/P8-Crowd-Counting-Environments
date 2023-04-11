@@ -132,7 +132,7 @@ class CalibrationYOLO:
         proximity_conditions = [(bb.y1 < (oy-prox) or bb.y1 > (oy+prox)) for oy in other_y]
         
         no_square_people_conditions = [
-            (bb.h > bb.w * 3.7) # real ratio is 3.9
+            (bb.h > bb.w * 2.2) # real ratio is 3.9
         ]
         
         conditions = margin_conditions + size_conditions + proximity_conditions + no_square_people_conditions#+ height_conditions
@@ -157,7 +157,7 @@ class CalibrationYOLO:
                 box = box.cpu().numpy()
                 conf = box.conf.tolist()[0]
                 print("Class: {}, Conf {}".format(Labels(pred_class)._name_ , conf))
-                if conf < 0.4:
+                if conf < 0.35:
                     continue
                 if pred_class == Labels.PERSON:
                     xywh = box.xywh.tolist()[0]

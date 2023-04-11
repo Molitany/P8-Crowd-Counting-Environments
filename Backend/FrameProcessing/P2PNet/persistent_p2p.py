@@ -1,9 +1,9 @@
-import argparse
-from app import get_args_parser, build_model, get_path, standard_transforms
-import torch
-from PIL import Image
+from .app import get_args_parser, build_model, get_path, standard_transforms
 from typing import List, Tuple
+from PIL import Image
 import numpy as np
+import argparse
+import torch
 
 class PersistentP2P:
     def __init__(self) -> None:
@@ -19,8 +19,8 @@ class PersistentP2P:
         # move to cpu/gpu
         self.model.to(self.device)
         # load trained model
-        if get_path('weights/SHTechA.pth') is not None:
-            checkpoint = torch.load(get_path('weights/SHTechA.pth'), map_location=device_name) 
+        if get_path('weights','SHTechA.pth') is not None:
+            checkpoint = torch.load(get_path('weights','SHTechA.pth'), map_location=device_name) 
             self.model.load_state_dict(checkpoint['model'])
         # convert to eval mode
         self.model.eval()
@@ -31,7 +31,7 @@ class PersistentP2P:
         ])
 
 
-    def process(self, frame:np.ndarray) -> Tuple(int, List[List[float, float]]):
+    def process(self, frame:np.ndarray) -> Tuple[int, List[List[float]]]:
         # load the images
         img_raw = Image.fromarray(frame, mode='BGR')
         # round the size

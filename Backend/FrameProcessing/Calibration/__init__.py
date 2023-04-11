@@ -1,1 +1,1 @@
-from yolov8 import CalibrationYOLO
+from .yolov8 import CalibrationYOLO

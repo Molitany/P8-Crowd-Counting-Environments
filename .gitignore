@@ -444,3 +444,7 @@ crosswalk
 vgg*.pth
 ShanghaiTech
 img.jpg
+
+#YOLO
+yolov8n.pt
+!Crosswalk.mp4

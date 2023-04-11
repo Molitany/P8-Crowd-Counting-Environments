@@ -14,7 +14,7 @@ class MagicFrameProcessor:
 
         self.__p2p = None
 
-    def process(self, frame:np.ndarray) -> Tuple(int, np.ndarray):
+    def process(self, frame:np.ndarray) -> Tuple[int, np.ndarray]:
         """
         if not calibrated -> calibrate
          :store magic_func :return annotated image
@@ -28,10 +28,10 @@ class MagicFrameProcessor:
         heatmap = self.__create_heatmap(frame, head_coords)
         return count, heatmap
 
-    def __calibrate(self, frame:np.ndarray, sample_points=6):
+    def __calibrate(self, frame:np.ndarray, sample_points=5):
         self.is_calibrating = True
         if not self.__calibration:
-            args = dict({'average_height':173})
+            args = dict({'test':True,'average_height':173})
             frame_wh = frame.shape[1], frame.shape[0]  # float width , height
             self.__calibration = CalibrationYOLO(args, *frame_wh)
             
@@ -52,7 +52,7 @@ class MagicFrameProcessor:
             self.__p2p = PersistentP2P()
         return self.__p2p.process(frame=frame)
 
-    def __create_heatmap(self, frame:np.ndarray, points:List[List[float,float]], overlay:bool=False) -> np.ndarray:
+    def __create_heatmap(self, frame:np.ndarray, points:List[List[float]], overlay:bool=False) -> np.ndarray:
         # draw the predictions
         size = 10
         img_to_draw = np.zeros(frame.shape, np.uint8)
