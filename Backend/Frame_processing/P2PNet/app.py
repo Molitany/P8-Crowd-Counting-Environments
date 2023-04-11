@@ -84,12 +84,12 @@ def run(args, img_path):
     return predict_cnt, img_to_draw
      #cv2.imwrite(os.path.join("./logs/", 'pred{}.jpg'.format(predict_cnt)), img_to_draw)
 
-def main(img_path):
+def main(img):
     """
     Given an image path it runs P2PNet using the vgg model in the P2PNet folder and returns count and img as cv2 array
     """
     # arguments are ignored and default are used instead
     parser = argparse.ArgumentParser('P2PNet evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
-    return run(args, img_path)
+    return run(args, img)
 

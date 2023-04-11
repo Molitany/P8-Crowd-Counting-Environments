@@ -78,11 +78,16 @@ class CalibrationYOLO:
         }
         self.frame_height = math.ceil(frame_height)
         self.frame_width = math.ceil(frame_width)
-        self.list_of_people:List[BoundingBox] = [] 
+        self.list_of_people:List[BoundingBox] = []
+        self.magic_mode:int = 0
     
     @property
     def size(self) -> int:
         return len(self.list_of_people)
+
+    @property
+    def mode(self) -> int:
+        return self.magic_mode
 
     def real_magic(self, yrow: List | int, p1:BoundingBox, p2:BoundingBox,avg_height=173):
         def magic(y,p1=p1,p2=p2):
@@ -160,8 +165,10 @@ class CalibrationYOLO:
                     bb = BoundingBox(xyxy, xywh[2:])
                     self.bb_add_if_valid(bb)
                 elif pred_class == Labels.CAKE:
+                    self.magic_mode = 2
                     print('CAKE '*1000)
                 elif pred_class == Labels.PHONE:
+                    self.magic_mode = 1
                     print('>>### PHONE REGISTERED ###<<\n'*5)
         return results
 
