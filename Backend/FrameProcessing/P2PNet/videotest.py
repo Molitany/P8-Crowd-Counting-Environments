@@ -31,7 +31,7 @@ def roundSeconds(dateTimeObject):
     return newDateTime.replace(microsecond=0)
 
 if __name__ == "__main__":
-   save_frame_range(get_path('videofile.mp4'), 0, 50, 10, get_path('images'), 'img_test') 
+   save_frame_range(get_path('Crosswalk.mp4'), 0, 50, 10, get_path('images'), 'img_test') 
    for filename in os.listdir(get_path('images')): 
         f = os.path.join(get_path('images'), filename)
         if os.path.isfile(f):

@@ -35,6 +35,10 @@ class PersistentP2P:
         # load the images
         img_raw = Image.fromarray(np.uint8(frame)).convert('RGB')
         # round the size
+        #width, height = img_raw.size
+        #new_width = width // 128 * 128
+        #new_height = height // 128 * 128
+        #img_raw = img_raw.resize((new_width, new_height), Image.LANCZOS)
         # pre-proccessing
         img = self.transform(img_raw)
 

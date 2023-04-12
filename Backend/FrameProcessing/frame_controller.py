@@ -10,6 +10,8 @@ import os
 from PIL import Image
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
+from PIL import Image
+os.environ['CUDA_VISIBLE_DEVICES']=''
 
 class MagicFrameProcessor:
     def __init__(self) -> None:
