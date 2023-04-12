@@ -9,7 +9,10 @@ import sys
 from typing import Iterable
 
 import torch
-from .util import misc as utils
+try:
+    from .util import misc as utils
+except:
+    from util import misc as utils
 #import util.misc as utils
 #from util.misc import NestedTensor
 import numpy as np

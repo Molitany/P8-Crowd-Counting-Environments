@@ -7,6 +7,7 @@ from typing import Tuple, List
 import torch
 import gc
 import os
+from PIL import Image
 os.environ['CUDA_VISIBLE_DEVICES']=''
 
 class MagicFrameProcessor:
@@ -26,6 +27,11 @@ class MagicFrameProcessor:
         else -> p2p -> heatmap
          :store sampling :return count, heatmap
         """
+        width, height = frame.shape[1], frame.shape[0]
+        new_width = width // 128 * 128
+        new_height = height // 128 * 128
+        frame = cv2.resize(frame, dsize=(new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+        
         self.__magic = lambda x: 0.00445804253434011*x+0.1
         if not self.__magic: # change todo re-calibration
             return self.__calibrate(frame=frame)
@@ -91,7 +97,7 @@ class MagicFrameProcessor:
 
 
 if __name__ == '__main__':
-    cap = cv2.VideoCapture('Crosswalk.mp4')
+    cap = cv2.VideoCapture('Crosswalk_s.mp4')
     magic = MagicFrameProcessor()
     while True:
         success, frame = cap.read()
