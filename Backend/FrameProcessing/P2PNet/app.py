@@ -31,7 +31,7 @@ def get_args_parser():
 
     return parser
 
-def run(args, img_path):
+def run(args, img):
     device_name = 'cpu'
     device = torch.device(device_name) #TODO: add gpu support here
     # get the P2PNet
@@ -51,7 +51,7 @@ def run(args, img_path):
     ])
 
     # load the images
-    img_raw = Image.open(img_path).convert('RGB')
+    img_raw = Image.fromarray(np.uint8(img)).convert('RGB')
     # round the size
     width, height = img_raw.size
     new_width = width // 128 * 128

@@ -194,7 +194,7 @@ class CalibrationYOLO:
         magic = lambda x: a*x+b
 
         if self.args.test:
-            #display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
+            display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
             display_magic_curve(magic=magic, height=self.frame_height)
 
         return a,b
