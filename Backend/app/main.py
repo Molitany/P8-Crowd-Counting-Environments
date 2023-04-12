@@ -7,7 +7,6 @@ from app.core.config import settings
 from broadcaster import Broadcast
 from pydantic import BaseModel
 
-
 import pandas as pd
 import asyncio
 import time
@@ -18,6 +17,7 @@ def get_application():
     _app = FastAPI(
         title=settings.PROJECT_NAME,
         on_startup=[broadcast.connect],
+        on_shutdown = [broadcast.disconnect]
     )
 
 
@@ -31,29 +31,33 @@ def get_application():
 
     return _app
 
-class Publish(BaseModel):
-    channel: str = "Warning"
-    message: str
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self,websocket:WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self,websocket:WebSocket):
+        self.active_connections.remove(websocket)
+    
+    async def send_personal_message(self, message:str,websocket:WebSocket):
+        await websocket.send_text(message)
+
+    async def sendJson(self, message:json,websocket:WebSocket):
+        await websocket.send_json(message)
+
+    async def broadcastWarning(self, message:str):
+        for connection in self.active_connections:
+            await connection.send_json({"warning": message})
+
+    
+
+manager = ConnectionManager()
 
 
 app = get_application()
-
-
-
-async def events_ws(websocket:WebSocket):
-        await events_ws_sender(websocket),
-
-async def events_ws_reciever(websocket:WebSocket):
-        async for message in websocket.iter_text():
-            await broadcast.publish(channel="density", message=message)
-
-@app.websocket("/density")
-async def events_ws_sender(websocket:WebSocket):
-    await websocket.accept()
-    async with broadcast.subscribe(channel="density") as subscriber:
-            async for event in subscriber:
-                await websocket.send_text(event.message)
-                await broadcast.publish(channel="density", message="hello world")
 
 
 @app.get("/")
@@ -61,26 +65,43 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.post("/push")
-async def push_message(publish:Publish):
-    await broadcast.publish(publish.channel, 
-    json.dumps(publish.message))
-    return Publish(channel= publish.channel,
-                   message=json.dumps(publish.message))
 
-
-@app.websocket("/d")
+@app.websocket("/density")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
+    await manager.connect(websocket)
     while True:
         data = await websocket.receive_text()
         print("received text")
         try: 
             with open("app/testPictureK.png", "rb") as image_file:
                 encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                await manager.sendJson({"image" :encoded_string},websocket)
                 
         except Exception as e:
             print('error', e)
             break
-        await websocket.send_json({"image" :encoded_string})
+        await asyncio.sleep(5)
+        try: 
+            with open("app/testPictureMK.png", "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                await manager.sendJson({"image" :encoded_string},websocket)
+                
+        except Exception as e:
+            print('error', e)
+            break
 
+        
+
+async def P2P():
+    while True:
+        print("TESTA")
+        await asyncio.  sleep(10)
+        print("TESTB")
+        await manager.broadcastWarning("TEST")
+
+loop = asyncio.get_event_loop()
+
+if not loop.is_running():
+    loop.run_until_complete(P2P())
+else: 
+    loop.create_task(P2P())

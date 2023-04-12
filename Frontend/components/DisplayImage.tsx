@@ -26,7 +26,6 @@ const DisplayImage = () => {
             setServerState(e.type);
         }
         ws.onmessage = (e) => {
-            console.log(e)
             const js = JSON.parse(e.data);
             if(js.warning){
                 console.log("warning");
