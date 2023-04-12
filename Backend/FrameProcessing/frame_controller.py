@@ -3,6 +3,11 @@ import numpy as np
 from Calibration import CalibrationYOLO
 from P2PNet import PersistentP2P
 from typing import Tuple, List
+#from numba import cuda, njit # <= 0.56
+import torch
+import gc
+import os
+os.environ['CUDA_VISIBLE_DEVICES']=''
 
 class MagicFrameProcessor:
     def __init__(self) -> None:
@@ -21,11 +26,13 @@ class MagicFrameProcessor:
         else -> p2p -> heatmap
          :store sampling :return count, heatmap
         """
+        self.__magic = lambda x: 0.00445804253434011*x+0.1
         if not self.__magic: # change todo re-calibration
             return self.__calibrate(frame=frame)
         
         count, head_coords = self.__find_heads(frame=frame)
-        heatmap = self.__create_heatmap(frame, head_coords)
+        #heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
+        heatmap = self.__show_heads(frame, head_coords)
         return count, heatmap
 
     def __calibrate(self, frame:np.ndarray, sample_points=5):
@@ -41,9 +48,14 @@ class MagicFrameProcessor:
         if self.__calibration.size >= sample_points:
             self.is_calibrating = False
             self.__magic_weight += 1
-            self.__magic = self.__calibration.create_lerp_function()
+            a,b = self.__calibration.create_lerp_function()
+            print('##############################',a,b)
+            self.__magic = lambda x: a*x+b
             self.mode = self.__calibration.mode
             self.__calibration = None
+            gc.collect()
+            torch.cuda.empty_cache()
+
             # do the magic func merge dance here probably..
         return -1, annotated_frame
     
@@ -52,13 +64,21 @@ class MagicFrameProcessor:
             self.__p2p = PersistentP2P()
         return self.__p2p.process(frame=frame)
 
+
+    def __show_heads(self, frame:np.ndarray, points:List[List[float]]):
+        for p in points:
+            img_to_draw = cv2.circle(frame, (int(p[0]), int(p[1])), int(2), (0, 0, 255), -1)
+        return img_to_draw
+
+
     def __create_heatmap(self, frame:np.ndarray, points:List[List[float]], overlay:bool=False) -> np.ndarray:
         # draw the predictions
         size = 10
         img_to_draw = np.zeros(frame.shape, np.uint8)
+        magic = self.__magic
         for p in points:
-            scaled = self.__magic(p[1]) * size
-            img_to_draw = cv2.circle(img_to_draw, (int(p[0]), int(p[1])), scaled, (255, 255, 255), -1)
+            scaled = magic(p[1]) * size
+            img_to_draw = cv2.circle(img_to_draw, (int(p[0]), int(p[1])), int(scaled), (255, 255, 255), -1)
         
         blur = cv2.GaussianBlur(img_to_draw, (13,13),11)
         heatmap = cv2.applyColorMap(blur, cv2.COLORMAP_JET)

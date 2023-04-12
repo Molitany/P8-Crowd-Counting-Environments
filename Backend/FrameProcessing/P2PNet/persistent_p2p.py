@@ -33,7 +33,7 @@ class PersistentP2P:
 
     def process(self, frame:np.ndarray) -> Tuple[int, List[List[float]]]:
         # load the images
-        img_raw = Image.fromarray(frame, mode='BGR')
+        img_raw = Image.fromarray(np.uint8(frame)).convert('RGB')
         # round the size
         width, height = img_raw.size
         new_width = width // 128 * 128

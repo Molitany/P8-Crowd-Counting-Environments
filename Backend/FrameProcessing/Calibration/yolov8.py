@@ -80,7 +80,8 @@ class CalibrationYOLO:
         self.frame_width = math.ceil(frame_width)
         self.list_of_people:List[BoundingBox] = []
         self.magic_mode:int = 0
-    
+
+
     @property
     def size(self) -> int:
         return len(self.list_of_people)
@@ -193,9 +194,10 @@ class CalibrationYOLO:
         magic = lambda x: a*x+b
 
         if self.args.test:
-            display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
-        
-        return magic
+            #display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
+            display_magic_curve(magic=magic, height=self.frame_height)
+
+        return a,b
 
 def lerp_engine_stream(stream:cv2.VideoCapture, _args):
     args = _args
@@ -233,8 +235,7 @@ def lerp_engine_stream(stream:cv2.VideoCapture, _args):
 if __name__ == '__main__':
     args = parse_args()
     cap = cv2.VideoCapture('Crosswalk.mp4')
-    magic_func = lerp_engine_stream(cap, args)
-    display_magic_curve(magic=magic_func, height=cap.get(4))
+    a,b = lerp_engine_stream(cap, args)
     # Release the video capture object and close the display window
     cap.release()
     cv2.destroyAllWindows()
