@@ -1,5 +1,5 @@
 import json
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from app.core.config import settings
@@ -65,26 +65,31 @@ async def root():
 @app.websocket("/density")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
-    while True:
-        data = await websocket.receive_text()
-        print("received text")
-        try: 
-            with open("app/testPictureK.png", "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                await manager.sendJson({"image" :encoded_string},websocket)
-                
-        except Exception as e:
-            print('error', e)
-            break
-        await asyncio.sleep(5)
-        try: 
-            with open("app/testPictureMK.png", "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                await manager.sendJson({"image" :encoded_string},websocket)
-                
-        except Exception as e:
-            print('error', e)
-            break
+    try: 
+        while True:
+            data = await websocket.receive_text()
+            print("received text")
+            try: 
+                with open("app/testPictureK.png", "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    await manager.sendJson({"image" :encoded_string},websocket)
+            except Exception as e:
+                print('error [[', e,']] Websocket will now be closed')
+                manager.disconnect(websocket)
+                break
+            await asyncio.sleep(5)
+            try: 
+                with open("app/testPictureMK.png", "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    await manager.sendJson({"image" :encoded_string},websocket)
+                    
+            except Exception as e:
+                print('error [[', e,']] websocket will now be closed')
+                manager.disconnect(websocket)
+                break
+    except WebSocketDisconnect: 
+        manager.disconnect(websocket)
+        print("Client Disconnected")
 
         
 
