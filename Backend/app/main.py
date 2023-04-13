@@ -4,20 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from app.core.config import settings
 #from starlette.concurrency import run_until_complete 
-from broadcaster import Broadcast
-from pydantic import BaseModel
 
 import pandas as pd
 import asyncio
-import time
 import base64
-broadcast = Broadcast('memory://')
 
 def get_application():
     _app = FastAPI(
         title=settings.PROJECT_NAME,
-        on_startup=[broadcast.connect],
-        on_shutdown = [broadcast.disconnect]
     )
 
 
@@ -37,6 +31,7 @@ class ConnectionManager:
 
     async def connect(self,websocket:WebSocket):
         await websocket.accept()
+        print("New connection")
         self.active_connections.append(websocket)
 
     def disconnect(self,websocket:WebSocket):
@@ -49,10 +44,11 @@ class ConnectionManager:
         await websocket.send_json(message)
 
     async def broadcastWarning(self, message:str):
-        for connection in self.active_connections:
-            await connection.send_json({"warning": message})
-
-    
+        try:
+            for connection in self.active_connections:
+                await connection.send_json({"warning": message})
+        except Exception as e:
+            print(e)
 
 manager = ConnectionManager()
 
@@ -94,11 +90,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
 async def P2P():
     while True:
-        print("TESTA")
         await asyncio.  sleep(10)
-        print("TESTB")
         await manager.broadcastWarning("TEST")
-
+        print("Sent Warning")
 loop = asyncio.get_event_loop()
 
 if not loop.is_running():
