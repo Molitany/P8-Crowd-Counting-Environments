@@ -109,9 +109,12 @@ class MagicFrameProcessor:
 if __name__ == '__main__':
     cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
     magic = MagicFrameProcessor()
+    tick = 0
     while True:
         success, frame = cap.read()
-        if success:
+        tick += 1
+        if success and tick%3==0:
+            tick = 0
             count, img = magic.process(frame=frame)
 
             cv2.imshow("YOLOv8 Inference", img)
