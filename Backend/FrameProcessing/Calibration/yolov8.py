@@ -74,7 +74,9 @@ class CalibrationYOLO:
         # pred args
         self.dict_args = {
             'stream': False, # as iterator if true
-            'classes':Labels.get_all()
+            'classes':Labels.get_all(),
+            'max_det':1200,
+            'conf':0.45
         }
         self.frame_height = math.ceil(frame_height)
         self.frame_width = math.ceil(frame_width)
@@ -109,7 +111,7 @@ class CalibrationYOLO:
         no y-axis overlap 
         no same bb height 
         """
-        margin = 0.02 #0.05
+        margin = 0.05 #0.05
         w_margin = self.frame_width * margin
         h_margin = self.frame_height * margin
         
@@ -119,33 +121,33 @@ class CalibrationYOLO:
             (bb.y1 > h_margin),
             (bb.y2 < (self.frame_height - h_margin))
         ]
-        size_upper_limit = 0.7
-        size_lower_limit = 0.05#0.3
-        bbul = self.frame_height * size_upper_limit
-        bbll = self.frame_height * size_lower_limit
-        size_conditions = [
-            (bbul > bb.h > bbll) 
-        ]
-        proximity_margin = 0.05
+        #size_upper_limit = 0.7
+        #size_lower_limit = 0.02#0.3
+        #bbul = self.frame_height * size_upper_limit
+        #bbll = self.frame_height * size_lower_limit
+        #size_conditions = [
+        #    (bbul > bb.h > bbll) 
+        #]
+        proximity_margin = 0.1
         prox = self.frame_height * proximity_margin
         other_y = [x.y1 for x in self.list_of_people]
         # prox is matrix based so substraction is upper and addition is lower.
         proximity_conditions = [(bb.y1 < (oy-prox) or bb.y1 > (oy+prox)) for oy in other_y]
         
         no_square_people_conditions = [
-            (bb.h > bb.w * 2.2) # real ratio is 3.9
+            (bb.h > bb.w * 2.5) # real ratio is 3.9
         ]
         
-        conditions = margin_conditions + size_conditions + proximity_conditions + no_square_people_conditions#+ height_conditions
+        conditions = margin_conditions + proximity_conditions# + no_square_people_conditions# + size_conditions + height_conditions
         valid = all(conditions)
         if valid:
             self.list_of_people.append(bb)
         if self.args.test:
             print('BB\'s', len(self.list_of_people))
             print("{} / {} margin_conditions held.".format(sum([1 for x in margin_conditions if x]), len(margin_conditions)))
-            print("{} / {} size_conditions held.".format(sum([1 for x in size_conditions if x]), len(size_conditions)))
+            #print("{} / {} size_conditions held.".format(sum([1 for x in size_conditions if x]), len(size_conditions)))
             print("{} / {} proximity_conditions held.".format(sum([1 for x in proximity_conditions if x]), len(proximity_conditions)))
-            print("{} / {} no_square_people_conditions held.".format(sum([1 for x in no_square_people_conditions if x]), len(no_square_people_conditions)))
+            #print("{} / {} no_square_people_conditions held.".format(sum([1 for x in no_square_people_conditions if x]), len(no_square_people_conditions)))
 
     def extract_entities(self, frame):
         # Run YOLOv8 inference on the frame
@@ -158,8 +160,7 @@ class CalibrationYOLO:
                 box = box.cpu().numpy()
                 conf = box.conf.tolist()[0]
                 print("Class: {}, Conf {}".format(Labels(pred_class)._name_ , conf))
-                if conf < 0.35:
-                    continue
+
                 if pred_class == Labels.PERSON:
                     xywh = box.xywh.tolist()[0]
                     xyxy = box.xyxy.tolist()[0]

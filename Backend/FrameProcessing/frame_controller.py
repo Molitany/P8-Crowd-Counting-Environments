@@ -10,8 +10,15 @@ import os
 from PIL import Image
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-from PIL import Image
-os.environ['CUDA_VISIBLE_DEVICES']=''
+USE_TEST_V = 'benno'
+test_vids = {
+    'benno':{
+        'path':'benno.mp4',
+        'avg_height':190,
+    }
+}
+dict_args = {'test': True, 'average_height': test_vids[USE_TEST_V]['avg_height']}
+
 
 class MagicFrameProcessor:
     def __init__(self) -> None:
@@ -47,7 +54,8 @@ class MagicFrameProcessor:
     def __calibrate(self, frame: np.ndarray, sample_points=5):
         self.is_calibrating = True
         if not self.__calibration:
-            args = dict({'test': True, 'average_height': 173})
+            #args = dict({'test': True, 'average_height': 190})
+            args = dict(dict_args)
             frame_wh = frame.shape[1], frame.shape[0]  # float width , height
             self.__calibration = CalibrationYOLO(args, *frame_wh)
 
@@ -99,7 +107,7 @@ class MagicFrameProcessor:
 
 
 if __name__ == '__main__':
-    cap = cv2.VideoCapture('istock-962060884_preview.mp4')
+    cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
     magic = MagicFrameProcessor()
     while True:
         success, frame = cap.read()
