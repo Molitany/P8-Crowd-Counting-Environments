@@ -15,6 +15,18 @@ test_vids = {
     'benno':{
         'path':'benno.mp4',
         'avg_height':190,
+    },
+    'crosswalk_s':{
+        'path': 'Crosswalk_s.mp4',
+        'avg_height':172
+    },
+    'crosswalk':{
+        'path': 'Crosswalk.mp4',
+        'avg_height':172
+    },
+    'istock':{
+        'path': 'istock-962060884_preview.mp4',
+        'avg_height':172
     }
 }
 dict_args = {'test': True, 'average_height': test_vids[USE_TEST_V]['avg_height']}
@@ -113,7 +125,7 @@ if __name__ == '__main__':
     while True:
         success, frame = cap.read()
         tick += 1
-        if success and tick%3==0:
+        if success:# and tick%0==0:
             tick = 0
             count, img = magic.process(frame=frame)
 
