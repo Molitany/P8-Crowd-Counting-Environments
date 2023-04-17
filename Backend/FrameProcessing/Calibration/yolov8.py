@@ -1,4 +1,5 @@
 import cv2
+from scipy import interpolate
 from ultralytics import YOLO
 import argparse
 from enum import IntEnum
@@ -76,7 +77,7 @@ class CalibrationYOLO:
             'stream': False, # as iterator if true
             'classes':Labels.get_all(),
             'max_det':1200,
-            'conf':0.45
+            'conf':0.30
         }
         self.frame_height = math.ceil(frame_height)
         self.frame_width = math.ceil(frame_width)
@@ -93,11 +94,11 @@ class CalibrationYOLO:
         return self.magic_mode
 
     def real_magic(self, yrow: List | int, p1:BoundingBox, p2:BoundingBox,avg_height=173):
-        def magic(y,p1=p1,p2=p2):
-            p1_cm_per_pixel = avg_height/p1.h
-            p2_cm_per_pixel = avg_height/p2.h
-            p3_cm_per_pixel = p1_cm_per_pixel + (y - p1.y1) * ((p2_cm_per_pixel - p1_cm_per_pixel)/(p2.y1 - p1.y1)) #lerp cm per pixel / scale, probably
-            return p3_cm_per_pixel
+        p1_cm_per_pixel = avg_height/p1.h
+        p2_cm_per_pixel = avg_height/p2.h
+        x = [p1.y1, p2.y1]
+        y = [p1_cm_per_pixel, p2_cm_per_pixel]
+        magic = interpolate.interp1d(x, y, fill_value='extrapolate')
         if not isinstance(yrow, list):
             yrow = range(yrow)
         res = [magic(x) for x in yrow]
@@ -208,6 +209,8 @@ def lerp_engine_stream(stream:cv2.VideoCapture, _args):
     assert args.points and args.average_height, 'Not enough args. fx {"points":8,"average_height":173}'
     assert frame_wh[0] > 0 and frame_wh[1] > 0, "Stopping due to no video capture available."
     mbr = CalibrationYOLO(args, *frame_wh)
+    print(mbr)
+
     while True: # calibrating
         # check if done calibrating
         if mbr.size >= args.points:
@@ -217,7 +220,6 @@ def lerp_engine_stream(stream:cv2.VideoCapture, _args):
         if success:
             results = mbr.extract_entities(frame=frame)
             
-
             if args.test:
                 # Visualize the results on the frame
                 annotated_frame = results[0].plot()

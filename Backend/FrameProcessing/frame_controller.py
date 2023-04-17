@@ -10,7 +10,7 @@ import os
 from PIL import Image
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-USE_TEST_V = 'benno'
+USE_TEST_V = 'crosswalk_s'
 test_vids = {
     'benno':{
         'path':'benno.mp4',
@@ -59,11 +59,11 @@ class MagicFrameProcessor:
             return self.__calibrate(frame=frame)
 
         count, head_coords = self.__find_heads(frame=frame)
-        # heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
-        heatmap = self.__show_heads(frame, head_coords)
+        heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
+        #heatmap = self.__show_heads(frame, head_coords)
         return count, heatmap
 
-    def __calibrate(self, frame: np.ndarray, sample_points=5):
+    def __calibrate(self, frame: np.ndarray, sample_points=3):
         self.is_calibrating = True
         if not self.__calibration:
             #args = dict({'test': True, 'average_height': 190})
@@ -101,11 +101,11 @@ class MagicFrameProcessor:
 
     def __create_heatmap(self, frame: np.ndarray, points: List[List[float]], overlay: bool = False) -> np.ndarray:
         # draw the predictions
-        size = 10
+        size = 20
         img_to_draw = np.zeros(frame.shape, np.uint8)
         magic = self.__magic
         for p in points:
-            scaled = magic(p[1]) * size
+            scaled = 1/magic(p[1]) * size
             img_to_draw = cv2.circle(
                 img_to_draw, (int(p[0]), int(p[1])), int(scaled), (255, 255, 255), -1)
 
