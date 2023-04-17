@@ -1,8 +1,10 @@
 import json
+import time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from app.core.config import settings
+from concurrent.futures import ThreadPoolExecutor
 #from starlette.concurrency import run_until_complete 
 
 import pandas as pd
@@ -93,14 +95,22 @@ async def websocket_endpoint(websocket: WebSocket):
 
         
 
-async def P2P():
+def P2P():
     while True:
-        await asyncio.  sleep(10)
-        await manager.broadcastWarning("TEST")
+        time.sleep(10)
+        asyncio.run(manager.broadcastWarning("TEST"))
         print("Sent Warning")
-loop = asyncio.get_event_loop()
 
-if not loop.is_running():
-    loop.run_until_complete(P2P())
-else: 
-    loop.create_task(P2P())
+executor = ThreadPoolExecutor()
+
+def start_P2P():
+    executor.submit(P2P)
+
+start_P2P()
+    
+# loop = asyncio.get_event_loop()
+
+# if not loop.is_running():
+#     loop.run_until_complete(P2P())
+# else: 
+#     loop.create_task(P2P())
