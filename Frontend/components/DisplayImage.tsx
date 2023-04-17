@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState,useRef } from 'react'
 import { View, Image, StyleSheet, Text, Button, } from 'react-native';
 
 
-
-
 const DisplayImage = () => {
+    //useRef to have the webSocket asscessible in this scope.
+    const websocketRef = useRef<WebSocket | null>(null);
     const [serverMessages, setServerMessages] = useState([String]);
     const [connectedToServer, setConnectedToserver] = useState(false);
     const [serverState, setServerState] = useState('Loading...');
-    const [imageReceived, setImageReceived] = useState(false)
+    const [imageReceived, setImageReceived] = useState(false);
     const [image, setImage] = useState(String);
-    const ws = React.useRef(new WebSocket('ws://localhost:8000/density')).current;
     //useEffect defining what actions happen when the events are triggered. 
     useEffect(() => {
         let serverMessagesList = [String];
+        const ws = new WebSocket('ws://localhost:8000/density');
+
         ws.onopen = () => {
             setConnectedToserver(true);
             console.log("Connected")
@@ -35,6 +36,7 @@ const DisplayImage = () => {
             serverMessagesList.push(e.data);
             setServerMessages([...serverMessagesList]);
         };
+        websocketRef.current = ws;
     }, []
     )
     /* Found out i dont actually need this promise but im keeping it just incase something later do.
@@ -50,6 +52,17 @@ const DisplayImage = () => {
         })
     }*/
     
+    //Only exist to send arbitrary message to server. Likely deleted or changed later.
+    const sendToSocket = () => {
+        try  {
+            if(websocketRef.current){
+                websocketRef.current.send("Hello World");
+            }}
+            catch (error){
+                console.log(error)
+            }
+        }
+    
     // Is called in onmessage. Sets Image to the image string.
     const receiveMessage = (js: { image: string }) => {
         /*asyncSetImage(js).then((data: string) => {
@@ -59,10 +72,7 @@ const DisplayImage = () => {
         setImage(PNG);
         setImageReceived(true);
     }
-    //Only exist to send arbitrary message to server. Likely deleted or changed later.
-    const sendToSocket = () => {
-        ws.send("Hello World");
-    }
+    
 
     function ImageToDisplay() {
         if (imageReceived) {
