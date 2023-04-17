@@ -8,11 +8,10 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "frame_controller.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--data_path", "./datas/part_B_final", "--model_path", "./models/SHHB.pth"],
-            "cwd": "${workspaceFolder}/Backend/SASNet_ROOT"
+            "cwd": "${workspaceFolder}/Backend/FrameProcessing"
         }
     ]
 }
