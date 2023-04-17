@@ -111,6 +111,10 @@ class MagicFrameProcessor:
 
         blur = cv2.GaussianBlur(img_to_draw, (13, 13), 11)
         heatmap = cv2.applyColorMap(blur, cv2.COLORMAP_JET)
+        # imgHSV = cv2.cvtColor(heatmap, cv2.COLOR_BGR2HSV)
+        # mask = cv2.inRange(imgHSV, np.array([120,255,128]), np.array([120,255,128])) # np.array([120,255,128]) blue
+        # mask = 255-mask
+        # res = cv2.bitwise_and(img, img, mask=mask)
 
         if overlay:
             return cv2.addWeighted(heatmap, 0.5, frame, 0.5, 0)
