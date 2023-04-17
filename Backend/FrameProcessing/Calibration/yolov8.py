@@ -66,6 +66,9 @@ class BoundingBox:
         self.y2 = xyxy[3]
         self.w = wh[0]
         self.h = wh[1]
+    
+    def __repr__(self) -> str:
+        return str(hash((self.x1,self.y1,self.x2,self.y2,self.w,self.h)))
 
 class CalibrationYOLO:
     def __init__(self, args, frame_width, frame_height) -> None:
@@ -112,7 +115,7 @@ class CalibrationYOLO:
         no y-axis overlap 
         no same bb height 
         """
-        margin = 0.05 #0.05
+        margin = 0.15 #0.05
         w_margin = self.frame_width * margin
         h_margin = self.frame_height * margin
         
@@ -129,17 +132,17 @@ class CalibrationYOLO:
         #size_conditions = [
         #    (bbul > bb.h > bbll) 
         #]
-        proximity_margin = 0.1
+        proximity_margin = 0.03
         prox = self.frame_height * proximity_margin
         other_y = [x.y1 for x in self.list_of_people]
         # prox is matrix based so substraction is upper and addition is lower.
         proximity_conditions = [(bb.y1 < (oy-prox) or bb.y1 > (oy+prox)) for oy in other_y]
         
-        no_square_people_conditions = [
-            (bb.h > bb.w * 2.5) # real ratio is 3.9
-        ]
+        #no_square_people_conditions = [
+        #    (bb.h > bb.w * 3) # real ratio is 3.9
+        #]
         
-        conditions = margin_conditions + proximity_conditions# + no_square_people_conditions# + size_conditions + height_conditions
+        conditions = margin_conditions + proximity_conditions #+ no_square_people_conditions# + size_conditions + height_conditions
         valid = all(conditions)
         if valid:
             self.list_of_people.append(bb)
@@ -188,11 +191,17 @@ class CalibrationYOLO:
         bb2s = self.list_of_people[1:] # remove first + copy
         for bb1 in self.list_of_people:
             for bb2 in bb2s:
-                mega_lerps.append(self.real_magic(frame_h_arr, bb1, bb2, avg_height=self.args.average_height))
-                bb2s.pop(0)   
+                line = self.real_magic(frame_h_arr, bb1, bb2, avg_height=self.args.average_height)
+                bb2s.pop(0)
+                if not line[0] > line[-1]:
+                    print('## Removed outlier produced by:', bb1, '-->', bb2)
+                    continue
+                mega_lerps.append(line)
+        assert len(mega_lerps) > 0, 'Not enough valid lines found' 
         mega_lerp = sum(mega_lerps, [])
-        lerps = len(mega_lerp) // self.frame_height # interger divide -> amount of 'lines'
-        a,b = np.polyfit(lerps * frame_h_arr, mega_lerp, 1)
+        #lerps = len(mega_lerp) // self.frame_height # interger divide -> amount of 'lines'
+        #a,b = np.polyfit(lerps * frame_h_arr, mega_lerp, 1)
+        a,b = np.polyfit(len(mega_lerps) * frame_h_arr, mega_lerp, 1)
         magic = lambda x: a*x+b
 
         if self.args.test:
