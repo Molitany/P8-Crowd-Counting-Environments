@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from app.core.config import settings
 from concurrent.futures import ThreadPoolExecutor
 #from starlette.concurrency import run_until_complete 
+from videotest import P2P_func
 
 import pandas as pd
 import asyncio
@@ -97,6 +98,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 def P2P():
     while True:
+        P2P_func()
         time.sleep(10)
         asyncio.run(manager.broadcastWarning("TEST"))
         print("Sent Warning")
