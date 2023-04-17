@@ -92,8 +92,24 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
         print("Client Disconnected")
 
+import cv2
+from FrameProcessing import MagicFrameProcessor
+def P2P2():
+    cap = cv2.VideoCapture(0)
+    magic = MagicFrameProcessor()
+    while True:
+        success, frame = cap.read()
+        if success:
+            count, img = magic.process(frame=frame)
 
-        
+            cv2.imshow("Video out", img)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+        else:
+            # Break the loop if the end of the video is reached
+            break
+    cap.release()
+    cv2.destroyAllWindows()        
 
 def P2P():
     while True:
