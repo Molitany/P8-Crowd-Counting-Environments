@@ -63,7 +63,7 @@ class MagicFrameProcessor:
         #heatmap = self.__show_heads(frame, head_coords)
         return count, heatmap
 
-    def __calibrate(self, frame: np.ndarray, sample_points=3):
+    def __calibrate(self, frame: np.ndarray, sample_points=6):
         self.is_calibrating = True
         if not self.__calibration:
             #args = dict({'test': True, 'average_height': 190})
