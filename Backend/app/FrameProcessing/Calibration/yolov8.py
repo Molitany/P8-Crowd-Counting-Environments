@@ -138,9 +138,9 @@ class CalibrationYOLO:
         # prox is matrix based so substraction is upper and addition is lower.
         proximity_conditions = [(bb.y1 < (oy-prox) or bb.y1 > (oy+prox)) for oy in other_y]
         
-        #no_square_people_conditions = [
-        #    (bb.h > bb.w * 3) # real ratio is 3.9
-        #]
+        # no_square_people_conditions = [
+        #    (bb.h > bb.w * 2) # real ratio is 3.9
+        # ]
         
         conditions = margin_conditions + proximity_conditions #+ no_square_people_conditions# + size_conditions + height_conditions
         valid = all(conditions)

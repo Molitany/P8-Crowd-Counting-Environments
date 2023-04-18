@@ -10,7 +10,7 @@ import os
 from PIL import Image
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-USE_TEST_V = 'crosswalk_s'
+USE_TEST_V = 'istock'
 test_vids = {
     'benno':{
         'path':'benno.mp4',
@@ -101,24 +101,43 @@ class MagicFrameProcessor:
 
     def __create_heatmap(self, frame: np.ndarray, points: List[List[float]], overlay: bool = False) -> np.ndarray:
         # draw the predictions
-        size = 20
+        size = 11
         img_to_draw = np.zeros(frame.shape, np.uint8)
         magic = self.__magic
         for p in points:
-            scaled = 1/magic(p[1]) * size
+            m = magic(p[1])
+            if not m > 1:
+                m = 1
+            scaled = 1/m * size
             img_to_draw = cv2.circle(
                 img_to_draw, (int(p[0]), int(p[1])), int(scaled), (255, 255, 255), -1)
 
-        blur = cv2.GaussianBlur(img_to_draw, (13, 13), 11)
+        blur = cv2.GaussianBlur(img_to_draw, (21, 21), 11)
         heatmap = cv2.applyColorMap(blur, cv2.COLORMAP_JET)
-        # imgHSV = cv2.cvtColor(heatmap, cv2.COLOR_BGR2HSV)
-        # mask = cv2.inRange(imgHSV, np.array([120,255,128]), np.array([120,255,128])) # np.array([120,255,128]) blue
-        # mask = 255-mask
-        # res = cv2.bitwise_and(img, img, mask=mask)
-
+        
         if overlay:
-            return cv2.addWeighted(heatmap, 0.5, frame, 0.5, 0)
+            mask = cv2.inRange(heatmap, np.array([128,0,0]), np.array([128,0,0])) # np.array([120,255,128]) blue
+            mask = 255-mask
+            res = cv2.bitwise_and(heatmap, heatmap, mask=mask)
+            res_BGRA = cv2.cvtColor(res, cv2.COLOR_BGR2BGRA)
+            alpha = res_BGRA[:, :, 3]
+            alpha[np.all(res_BGRA[:, :, 1:3] == (0, 0), 2)] = 0
+            #alpha[np.all(res_BGRA[:, :, 0:3] != (0, 0, 0), 2)] = 100
 
+            h1, w1 = res_BGRA.shape[:2]
+            h2, w2 = frame.shape[:2]
+            img1_pad = np.zeros_like(frame)
+            img1_pad = cv2.cvtColor(img1_pad, cv2.COLOR_BGR2BGRA)
+            yo = (h2-h1)//2
+            xo = (w2-w1)//2
+            img1_pad[yo:yo+h1, xo:xo+w1] = res_BGRA
+
+            bgr = img1_pad[:,:,0:3]
+            alpha = img1_pad[:,:,3]
+            alpha = cv2.merge([alpha,alpha,alpha])
+
+            overlay = np.where(alpha==255, bgr, frame)
+            return overlay
         return heatmap
 
 
@@ -129,13 +148,14 @@ if __name__ == '__main__':
     while True:
         success, frame = cap.read()
         tick += 1
-        if success:# and tick%0==0:
-            tick = 0
-            count, img = magic.process(frame=frame)
+        if success:
+            if tick%3==0:
+                tick = 0
+                count, img = magic.process(frame=frame)
 
-            cv2.imshow("YOLOv8 Inference", img)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+                cv2.imshow("YOLOv8 Inference", img)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
         else:
             # Break the loop if the end of the video is reached
             break
