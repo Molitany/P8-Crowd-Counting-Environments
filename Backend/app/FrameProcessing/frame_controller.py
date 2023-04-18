@@ -1,87 +1,136 @@
-import cv2
-import numpy as np
 from Calibration import CalibrationYOLO
 from P2PNet import PersistentP2P
 from typing import Tuple, List
-# from numba import cuda, njit # <= 0.56
+import numpy as np
 import torch
+import cv2
 import gc
 import os
-from PIL import Image
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 USE_TEST_V = 'istock'
 test_vids = {
     'benno':{
         'path':'benno.mp4',
-        'avg_height':190,
     },
     'crosswalk_s':{
         'path': 'Crosswalk_s.mp4',
-        'avg_height':172
     },
     'crosswalk':{
         'path': 'Crosswalk.mp4',
-        'avg_height':172
     },
     'istock':{
         'path': 'istock-962060884_preview.mp4',
-        'avg_height':172
     }
 }
-dict_args = {'test': True, 'average_height': test_vids[USE_TEST_V]['avg_height']}
-
 
 class MagicFrameProcessor:
-    def __init__(self) -> None:
-        self.is_calibrating = False
-        self.mode = 0  # p2p mode
-        self.__calibration = None  # calibration obj containing YOLOv8
+    """
+    MagicFrameProcessor^TM - we dont know either.
+
+    Public:
+
+    .is_calibrating
+    - bool flag for deducing if in calibration mode or not.
+        
+    .current_mode
+    - int flag indicating operation mode.
+        
+    .process(frame, optional[style])
+    - image pipeline entry.
+    """
+    def __init__(self, test:bool=False, force_height:int=172) -> None:
+        # calibration args
+        self.__test = test
+        self.__use_human_height = force_height
+
+        # public
+        self.__is_calibrating = False
+        self.__mode = 0  # p2p mode
+        
+        # magic scaling function and current weight
         self.__magic = None  # scale func
         self.__magic_weight = 0  # scale func weight for re-calibration
+        
+        # ML persistance objects
+        self.__calibration = None  # calibration obj containing YOLOv8
+        self.__p2p = None # prediction object containing PersistentP2P
 
-        self.__p2p = None
 
-    def process(self, frame: np.ndarray) -> Tuple[int, np.ndarray]:
+    @property
+    def is_calibrating(self) -> bool:
+        """ :returns True if the initial calibration is not done. """
+        return self.__is_calibrating
+    
+    @property
+    def current_mode(self) -> int:
+        """ :returns the operation mode set by the calibration. """
+        return self.__mode
+
+    def process(self, frame: np.ndarray, style:int=1) -> Tuple[bool, int, np.ndarray]:
         """
-        if not calibrated -> calibrate
-         :store magic_func :return annotated image
-        else -> p2p -> heatmap
-         :store sampling :return count, heatmap
+        This is the main function. It takes an image array and scales the image to a multiple of 128.
+        Then if there is no calibration, the image is fed to the YOLO calibration object.
+        If there is a calibration, the image is fed to the P2P persistence object, which returns pixel coordinates.
+        This is used to create a heatmap.
+
+        :arg frame is an image as a numpy array.
+        :arg style is an integer between 1-3. 1=overlayed-heatmap, 2=raw-heatmap, 3=dotted-heads.
+        :return Tuple (alert:bool, count:int, heatmap:numpy.ndarray)
+
+        :throws ValueError on arg style out-of-range.
         """
-        # self.__magic = lambda x: 0.00445804253434011*x+0.1
         width, height = frame.shape[1], frame.shape[0]
         new_width = width // 128 * 128
         new_height = height // 128 * 128
         frame = cv2.resize(frame, dsize=(new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
 
         if not self.__magic:  # change todo re-calibration
-            return self.__calibrate(frame=frame)
+            return False, *self.__calibrate(frame=frame)
 
         count, head_coords = self.__find_heads(frame=frame)
-        heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
-        #heatmap = self.__show_heads(frame, head_coords)
-        return count, heatmap
 
-    def __calibrate(self, frame: np.ndarray, sample_points=6):
-        self.is_calibrating = True
+        if style == 1:
+            heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
+        elif style == 2:
+            heatmap = self.__create_heatmap(frame, head_coords, overlay=False)
+        elif style == 3:
+            heatmap = self.__show_heads(frame, head_coords)
+        else:
+            raise ValueError('Out of range ')
+
+        alert:bool = False
+        return alert, count, heatmap
+
+    def __calibrate(self, frame: np.ndarray, sample_points=6) -> Tuple[int, np.ndarray]:
+        """
+        Feeds the image to YOLOv8 to use for calibration.
+        The returned int is always -1 to relay no heatmap creation.
+
+        :arg frame is an image as a numpy array.
+        :arg sample_points is the amount of valid calibration points before stopping.
+
+        :return Tuple (signal:int, frame:numpy.ndarray)
+        """
+        self.__is_calibrating = True
         if not self.__calibration:
-            #args = dict({'test': True, 'average_height': 190})
-            args = dict(dict_args)
+            args = dict({'test': self.__test, 'average_height': self.__use_human_height})
             frame_wh = frame.shape[1], frame.shape[0]  # float width , height
             self.__calibration = CalibrationYOLO(args, *frame_wh)
 
         res = self.__calibration.extract_entities(frame=frame)
-        annotated_frame = res[0].plot()
+        #annotated_frame = res[0].plot()
+        annotated_frame = next(res).plot()
 
         if self.__calibration.size >= sample_points:
-            self.is_calibrating = False
+            self.__is_calibrating = False
             self.__magic_weight += 1
             a, b = self.__calibration.create_lerp_function()
-            print('##############################', a, b)
+            if self.__test:
+                print(f'### Function a={a} and b={b}')
             self.__magic = lambda x: a*x+b
-            self.mode = self.__calibration.mode
-            self.__calibration = None
+            self.__mode = self.__calibration.mode
+            self.__calibration = None # remove YOLO from memory
             gc.collect()
             torch.cuda.empty_cache()
 
@@ -89,6 +138,11 @@ class MagicFrameProcessor:
         return -1, annotated_frame
 
     def __find_heads(self, frame: np.ndarray):
+        """ 
+        Initializes and calls the P2P model class to keep the model in memory.
+        :args: frame is a image as numpy.ndarray.
+        :returns list of list of float containing the pixel coordinates of predicted heads.
+        """
         if not self.__p2p:
             self.__p2p = PersistentP2P()
         return self.__p2p.process(frame=frame)
