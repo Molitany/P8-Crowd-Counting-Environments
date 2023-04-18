@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-from Calibration import CalibrationYOLO
-from P2PNet import PersistentP2P
+from .Calibration import CalibrationYOLO
+from .P2PNet import PersistentP2P
 from typing import Tuple, List
 # from numba import cuda, njit # <= 0.56
 import torch
@@ -29,7 +29,7 @@ test_vids = {
         'avg_height':172
     }
 }
-dict_args = {'test': True, 'average_height': test_vids[USE_TEST_V]['avg_height']}
+dict_args = {'test': False, 'average_height': test_vids[USE_TEST_V]['avg_height']}
 
 
 class MagicFrameProcessor:

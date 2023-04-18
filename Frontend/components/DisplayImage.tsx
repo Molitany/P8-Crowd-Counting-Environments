@@ -30,7 +30,10 @@ const DisplayImage = () => {
             const js = JSON.parse(e.data);
             if(js.warning){
                 console.log("warning");
+                console.log(js.count)
+                receiveWarning(js);
             }else{
+                console.log(js.image)
                 receiveMessage(js);
             }
             serverMessagesList.push(e.data);
@@ -69,6 +72,14 @@ const DisplayImage = () => {
             setImage(data)
         });*/
         const PNG = js.image.replace(/\s/g, '');
+        setImage(PNG);
+        setImageReceived(true);
+    }
+    const receiveWarning = (js: { warning: string }) => {
+        /*asyncSetImage(js).then((data: string) => {
+            setImage(data)
+        });*/
+        const PNG = js.warning.replace(/\s/g, '');
         setImage(PNG);
         setImageReceived(true);
     }

@@ -80,7 +80,8 @@ class CalibrationYOLO:
             'stream': False, # as iterator if true
             'classes':Labels.get_all(),
             'max_det':1200,
-            'conf':0.30
+            'conf':0.30,
+            'verbose': False
         }
         self.frame_height = math.ceil(frame_height)
         self.frame_width = math.ceil(frame_width)
