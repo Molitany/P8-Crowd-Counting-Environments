@@ -97,7 +97,7 @@ def P2P():
                 # Make a new event loop and call this function.
                 asyncio.run(manager.broadcastWarning(encoded_string,count))
 
-            cv2.imshow("Video out", img)
+            #cv2.imshow("Video out", img)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
         else:
@@ -117,6 +117,6 @@ def start_P2P():
     # Execute the p2p function asynchronously and return a future object
         executor.submit(P2P)
     finally:
-        executor.shutdown(False)
+        executor.shutdown(True)
 # Start the seperate thread with the P2P function
 start_P2P()
