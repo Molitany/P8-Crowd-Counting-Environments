@@ -119,11 +119,7 @@ class MagicFrameProcessor:
             self.__calibration = CalibrationYOLO(args, *frame_wh)
 
         res = self.__calibration.extract_entities(frame=frame)
-        #annotated_frame = list(res)[0].plot()
-        for r in res:
-            annotated_frame = r.plot()
-        else:
-            annotated_frame = frame
+        annotated_frame = res[0].plot()
 
         if self.__calibration.size >= sample_points:
             self.__is_calibrating = False

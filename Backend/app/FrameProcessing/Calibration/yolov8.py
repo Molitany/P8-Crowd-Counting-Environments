@@ -78,7 +78,7 @@ class CalibrationYOLO:
         self.args = AttributeDict(args) # store system args
         # pred args
         self.dict_args = {
-            'stream': True, # as iterator if true
+            'stream': False, # as iterator if true
             'classes':Labels.get_all(),
             'max_det':1200,
             'conf':0.30
@@ -228,8 +228,7 @@ def lerp_engine_stream(stream:cv2.VideoCapture, _args):
             
             if args.test:
                 # Visualize the results on the frame
-                #annotated_frame = results[0].plot()
-                annotated_frame = next(results).plot()
+                annotated_frame = results[0].plot()
                 # Display the annotated frame
                 cv2.imshow("YOLOv8 Inference", annotated_frame)
                 # Break the loop if 'q' is pressed
