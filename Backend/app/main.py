@@ -121,6 +121,6 @@ def start_P2P():
     # Execute the p2p function asynchronously and return a future object
         executor.submit(P2P)
     finally:
-        executor.shutdown(True)
+        executor.shutdown(False)
 # Start the seperate thread with the P2P function
 start_P2P()
