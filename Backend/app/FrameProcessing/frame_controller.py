@@ -119,8 +119,7 @@ class MagicFrameProcessor:
             self.__calibration = CalibrationYOLO(args, *frame_wh)
 
         res = self.__calibration.extract_entities(frame=frame)
-        #annotated_frame = res[0].plot()
-        annotated_frame = next(res).plot()
+        annotated_frame = res[0].plot()
 
         if self.__calibration.size >= sample_points:
             self.__is_calibrating = False
@@ -205,7 +204,7 @@ if __name__ == '__main__':
         if success:
             if tick%3==0:
                 tick = 0
-                count, img = magic.process(frame=frame)
+                trigger, count, img = magic.process(frame=frame)
 
                 cv2.imshow("YOLOv8 Inference", img)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
