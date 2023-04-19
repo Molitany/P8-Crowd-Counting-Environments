@@ -7,11 +7,11 @@ import numpy as np
 from PIL import Image
 import cv2
 try:
-    from .engine import *
-    from .models import build_model
-except:
-    from engine import *
+    #import engine
     from models import build_model
+except:
+    #from . import engine
+    from .models import build_model
 import os
 get_path = lambda *x : os.path.join(os.path.dirname(__file__),*x)
 def get_args_parser():
