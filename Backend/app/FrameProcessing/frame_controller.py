@@ -8,7 +8,7 @@ import gc
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-USE_TEST_V = 'istock'
+USE_TEST_V = 'crosswalk_s'
 test_vids = {
     'benno':{
         'path':'benno.mp4',
@@ -119,8 +119,11 @@ class MagicFrameProcessor:
             self.__calibration = CalibrationYOLO(args, *frame_wh)
 
         res = self.__calibration.extract_entities(frame=frame)
-        #annotated_frame = res[0].plot()
-        annotated_frame = next(res).plot()
+        #annotated_frame = list(res)[0].plot()
+        for r in res:
+            annotated_frame = r.plot()
+        else:
+            annotated_frame = frame
 
         if self.__calibration.size >= sample_points:
             self.__is_calibrating = False
@@ -155,18 +158,23 @@ class MagicFrameProcessor:
 
     def __create_heatmap(self, frame: np.ndarray, points: List[List[float]], overlay: bool = False) -> np.ndarray:
         # draw the predictions
-        size = 11
         img_to_draw = np.zeros(frame.shape, np.uint8)
         magic = self.__magic
+        size = 10
         for p in points:
+            color = 1
             m = magic(p[1])
-            if not m > 1:
+            if 0 < m < 1:
+                color *= m
+                m = 1
+            elif m <= 0: 
+                color *= 1/abs(m)
                 m = 1
             scaled = 1/m * size
             img_to_draw = cv2.circle(
-                img_to_draw, (int(p[0]), int(p[1])), int(scaled), (255, 255, 255), -1)
+                img_to_draw, (int(p[0]), int(p[1])), int(scaled), tuple(map(lambda x: x*color, (255, 255, 255))), -1)
 
-        blur = cv2.GaussianBlur(img_to_draw, (21, 21), 11)
+        blur = cv2.GaussianBlur(img_to_draw, (11, 11), cv2.BORDER_DEFAULT)
         heatmap = cv2.applyColorMap(blur, cv2.COLORMAP_JET)
         
         if overlay:
@@ -197,7 +205,7 @@ class MagicFrameProcessor:
 
 if __name__ == '__main__':
     cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
-    magic = MagicFrameProcessor()
+    magic = MagicFrameProcessor(test=False)
     tick = 0
     while True:
         success, frame = cap.read()
@@ -205,7 +213,7 @@ if __name__ == '__main__':
         if success:
             if tick%3==0:
                 tick = 0
-                count, img = magic.process(frame=frame)
+                trigger, count, img = magic.process(frame=frame)
 
                 cv2.imshow("YOLOv8 Inference", img)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
