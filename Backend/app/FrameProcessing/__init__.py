@@ -1,1 +1,1 @@
-from frame_controller import MagicFrameProcessor
+from .frame_controller import MagicFrameProcessor
