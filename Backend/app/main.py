@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from app.core.config import settings
 from concurrent.futures import ThreadPoolExecutor
 import cv2
-from .FrameProcessing import MagicFrameProcessor
+from . import MagicFrameProcessor
 
 import pandas as pd
 import asyncio
