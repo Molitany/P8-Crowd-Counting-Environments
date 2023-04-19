@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from app.core.config import settings
 from concurrent.futures import ThreadPoolExecutor
+import cv2
+from .FrameProcessing import MagicFrameProcessor
 
 import pandas as pd
 import asyncio
@@ -92,8 +94,6 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
         print("Client Disconnected")
 
-import cv2
-from FrameProcessing import MagicFrameProcessor
 def P2P2():
     cap = cv2.VideoCapture(0)
     magic = MagicFrameProcessor()
