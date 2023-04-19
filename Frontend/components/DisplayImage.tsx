@@ -1,6 +1,8 @@
 import React, { useEffect, useState,useRef } from 'react'
-import { View, Image, StyleSheet, Text, Button, } from 'react-native';
+import { View, Image, StyleSheet, Text, Button, Dimensions} from 'react-native';
+import NumberToShow from './NumberToShow';
 
+const { width, height } = Dimensions.get('window');
 
 const DisplayImage = () => {
     //useRef to have the webSocket asscessible in this scope.
@@ -10,6 +12,7 @@ const DisplayImage = () => {
     const [serverState, setServerState] = useState('Loading...');
     const [imageReceived, setImageReceived] = useState(false);
     const [image, setImage] = useState(String);
+    const [count,setCount] = useState(0);
     //useEffect defining what actions happen when the events are triggered. 
     useEffect(() => {
         let serverMessagesList = [String];
@@ -75,29 +78,37 @@ const DisplayImage = () => {
         setImage(PNG);
         setImageReceived(true);
     }
-    const receiveWarning = (js: { warning: string }) => {
+    const receiveWarning = (js: { warning: string, count:number }) => {
         /*asyncSetImage(js).then((data: string) => {
             setImage(data)
         });*/
         const PNG = js.warning.replace(/\s/g, '');
+        setCount(js.count)
         setImage(PNG);
         setImageReceived(true);
+    }
+    const removeWarning = () => {
+        setImageReceived(false)
     }
     
 
     function ImageToDisplay() {
         if (imageReceived) {
             return (
-                <div>
-                    <View>
-                        <Image source={{ uri: `data:image/jpeg;base64,${image}` }} style={styles.picture} />
-                    </View>
-                </div>
+                <View>
+                    {NumberToShow(count)}
+                    <Button
+                        onPress={removeWarning}
+                        title="Confirm warning"
+                        color="#241584"/>
+                    <Image source={{ uri: `data:image/jpeg;base64,${image}` }} style={styles.picture} />
+                            
+                </View>
             )
         } else {
 
             return (
-                <div>
+                <View>
                     <Button
                         onPress={sendToSocket}
                         title="Send to server"
@@ -105,13 +116,13 @@ const DisplayImage = () => {
                         accessibilityLabel="Learn more about this purple button" />
                     <Image
                         style={styles.picture}
+                        resizeMode="contain"
+
                         source={require('../assets/images/testPictureDDD.png')} />
-                </div>
+                </View>
             )
         }
     }
-
-
     return (
         <View style={styles.container}>
             {connectedToServer ? (
@@ -132,7 +143,8 @@ const styles = StyleSheet.create({
         paddingTop: 50,
     },
     picture: {
-        width: 300,
-        height: 400,
+        width: width,
+        height: height,
+    
     }
 })

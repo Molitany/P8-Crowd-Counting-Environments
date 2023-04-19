@@ -113,8 +113,10 @@ def P2P():
 executor = ThreadPoolExecutor()
 # chedules the function to run in a different thread
 def start_P2P():
+    try:
     # Execute the p2p function asynchronously and return a future object
-    executor.submit(P2P)
+        executor.submit(P2P)
+    finally:
+        executor.shutdown(False)
 # Start the seperate thread with the P2P function
 start_P2P()
-    
