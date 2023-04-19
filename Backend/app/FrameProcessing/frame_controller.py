@@ -156,20 +156,21 @@ class MagicFrameProcessor:
         # draw the predictions
         img_to_draw = np.zeros(frame.shape, np.uint8)
         magic = self.__magic
-        size = 10
+        normed = np.linalg.norm([magic(y) for y in range(frame.shape[0])])
+        size = 5
         for p in points:
             color = 1
             m = magic(p[1])
-            if 0 < m < 1:
-                color *= m
-                m = 1
-            elif m <= 0: 
-                color *= 1/abs(m)
-                m = 1
             scaled = 1/m * size
+            if scaled >=1:
+                scaled = scaled
+            else:
+                scaled = 1
+                color *= m/normed
             img_to_draw = cv2.circle(
                 img_to_draw, (int(p[0]), int(p[1])), int(scaled), tuple(map(lambda x: x*color, (255, 255, 255))), -1)
-
+        cv2.imshow("points", img_to_draw)
+        
         blur = cv2.GaussianBlur(img_to_draw, (11, 11), cv2.BORDER_DEFAULT)
         heatmap = cv2.applyColorMap(blur, cv2.COLORMAP_JET)
         
