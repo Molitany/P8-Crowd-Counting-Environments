@@ -8,7 +8,7 @@ from PIL import Image as im
 import pandas as pd
 import asyncio
 import base64
-
+from io import BytesIO
 
 def get_application():
     _app = FastAPI(
@@ -87,15 +87,19 @@ def P2P():
         if success:
             count, img = magic.process(frame=frame)
             if testCount % 20 == 0:
+                #make sure the image 
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                #get an image from the numpy array
                 image = im.fromarray(img)
+                #create a buffer to store the image
+                buffer = BytesIO()
+                #save the image in the buffer in PNG format
+                image.save(buffer,format="PNG")
+                #Encode the binary data to a base64 string
+                image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-                # This is terrible and i hate it. 
-                image.save('output_image.png')
-                with open("output_image.png", "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
                 # Make a new event loop and call this function.
-                asyncio.run(manager.broadcastWarning(encoded_string,count))
+                asyncio.run(manager.broadcastWarning(image_base64,count))
 
             cv2.imshow("Video out", img)
             if cv2.waitKey(1) & 0xFF == ord("q"):
