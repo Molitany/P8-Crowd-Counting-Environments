@@ -1,5 +1,9 @@
-from Calibration import CalibrationYOLO
-from P2PNet import PersistentP2P
+try:
+    from Calibration import CalibrationYOLO
+    from P2PNet import PersistentP2P
+except:
+    from . import CalibrationYOLO
+    from . import PersistentP2P
 from typing import Tuple, List
 import numpy as np
 import torch
