@@ -97,3 +97,22 @@ def main(img):
     args = parser.parse_args()
     return run(args, img)
 
+if __name__ == "__main__":
+    cap = cv2.VideoCapture(get_path("../benno.mp4"))
+    tick = 0
+    while True:
+        success, frame = cap.read()
+        tick += 1
+        if success:
+            if tick%3==0:
+                tick = 0
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                count, img = main(frame)
+                cv2.imshow("YOLOv8 Inference", img)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+        else:
+            # Break the loop if the end of the video is reached
+            break
+    cap.release()
+    cv2.destroyAllWindows()
