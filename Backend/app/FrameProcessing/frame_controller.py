@@ -108,10 +108,10 @@ class MagicFrameProcessor:
             if type(cu) is MultiPolygon:
                 for geom in cu.geoms:
                     frame = cv2.polylines(
-                        frame, [int_coords(geom.exterior.coords)], 1, (0, 0, 255), 4)
+                        frame, [int_coords(geom.exterior.coords)], 1, (0, 0, 255), 2)
             else:
                 frame = cv2.polylines(
-                    frame, [int_coords(cu.exterior.coords)], 1, (0, 0, 255), 4)
+                    frame, [int_coords(cu.exterior.coords)], 1, (0, 0, 255), 2)
         # if style == 1:
         #     heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
         # elif style == 2:
@@ -179,16 +179,22 @@ class MagicFrameProcessor:
         for hc in head_chords:
             magic = self.__magic
             cmpp = magic(hc[1])
-            ppm = 100/cmpp  # convert cm/pixel to pixel/m
-            poly = Polygon([[hc[0]-ppm*0.75, hc[1]-ppm], [hc[0]+ppm*0.75, hc[1]-ppm], [
-                           hc[0]+ppm*0.75*2, hc[1]+ppm], [hc[0]-ppm*0.75*2, hc[1]+ppm]])
+            # convert cm/pixel to pixel/m
+            hc_ppm = 100/cmpp
+            upper_point = hc[1]-hc_ppm/2
+            upper_local_ppm = 100/magic(upper_point)/2
+            lower_point = hc[1]+hc_ppm/2
+            lower_local_ppm = 100/magic(lower_point)/2
+
+            poly = Polygon([[hc[0]-upper_local_ppm, upper_point], [hc[0]+upper_local_ppm, upper_point], [
+                           hc[0]+lower_local_ppm, lower_point], [hc[0]-lower_local_ppm, lower_point]])
             density = 0
             for ohc in head_chords:
                 p_ohc = Point(*ohc)
                 if poly.contains(p_ohc):
                     density += 1
 
-            if density > 4:
+            if density >= 3:
                 trigger_points.append(poly)
         return trigger_points
 
