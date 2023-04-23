@@ -15,19 +15,25 @@ from shapely.geometry import Point, MultiPolygon
 from shapely.geometry.polygon import Polygon
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-USE_TEST_V = 'crosswalk_s'
+USE_TEST_V = '2'
 test_vids = {
     'benno': {
-        'path': 'benno.mp4',
+        'path': 'videos/benno.mp4',
     },
     'crosswalk_s': {
-        'path': 'Crosswalk_s.mp4',
+        'path': 'videos/Crosswalk_s.mp4',
     },
     'crosswalk': {
-        'path': 'Crosswalk.mp4',
+        'path': 'videos/Crosswalk.mp4',
     },
     'istock': {
-        'path': 'istock-962060884_preview.mp4',
+        'path': 'videos/istock-962060884_preview.mp4',
+    },
+    'full': {
+        'path': 'videos/12345.mp4',
+    },
+    '2': {
+        'path': 'videos/2.mp4',
     }
 }
 
