@@ -1,14 +1,15 @@
-import cv2
 from scipy import interpolate
 from ultralytics import YOLO
-import argparse
 from enum import IntEnum
-from typing import List
+from typing import List, Optional
 import numpy as np
+import argparse
 import math
+import cv2
 
 
 def parse_args():
+    """ args used for testing YOLO directly. """
     parser = argparse.ArgumentParser(description='Calibrate some cams')
     parser.add_argument('-t','--test', action='store_true', help='prints stuff')
     parser.add_argument('-p','--points', type=int, default=10, help='Interger for amount of calibration points')
@@ -125,33 +126,22 @@ class CalibrationYOLO:
             (bb.y1 > h_margin),
             (bb.y2 < (self.frame_height - h_margin))
         ]
-        #size_upper_limit = 0.7
-        #size_lower_limit = 0.02#0.3
-        #bbul = self.frame_height * size_upper_limit
-        #bbll = self.frame_height * size_lower_limit
-        #size_conditions = [
-        #    (bbul > bb.h > bbll) 
-        #]
         proximity_margin = 0.03
         prox = self.frame_height * proximity_margin
         other_y = [x.y1 for x in self.list_of_people]
         # prox is matrix based so substraction is upper and addition is lower.
         proximity_conditions = [(bb.y1 < (oy-prox) or bb.y1 > (oy+prox)) for oy in other_y]
-        
-        #no_square_people_conditions = [
-        #    (bb.h > bb.w * 3) # real ratio is 3.9
-        #]
-        
-        conditions = margin_conditions + proximity_conditions #+ no_square_people_conditions# + size_conditions + height_conditions
+                
+        conditions = margin_conditions + proximity_conditions
         valid = all(conditions)
+
         if valid:
             self.list_of_people.append(bb)
+
         if self.args.test:
             print('BB\'s', len(self.list_of_people))
             print("{} / {} margin_conditions held.".format(sum([1 for x in margin_conditions if x]), len(margin_conditions)))
-            #print("{} / {} size_conditions held.".format(sum([1 for x in size_conditions if x]), len(size_conditions)))
             print("{} / {} proximity_conditions held.".format(sum([1 for x in proximity_conditions if x]), len(proximity_conditions)))
-            #print("{} / {} no_square_people_conditions held.".format(sum([1 for x in no_square_people_conditions if x]), len(no_square_people_conditions)))
 
     def extract_entities(self, frame):
         # Run YOLOv8 inference on the frame
@@ -160,11 +150,7 @@ class CalibrationYOLO:
             pred_classes = res.boxes.cls.cpu().numpy().tolist()
             pred_classes = [int(x) for x in pred_classes]
             for box, pred_class in zip(res.boxes, pred_classes):
-                #print(box)
                 box = box.cpu().numpy()
-                conf = box.conf.tolist()[0]
-                print("Class: {}, Conf {}".format(Labels(pred_class)._name_ , conf))
-
                 if pred_class == Labels.PERSON:
                     xywh = box.xywh.tolist()[0]
                     xyxy = box.xyxy.tolist()[0]
@@ -175,17 +161,16 @@ class CalibrationYOLO:
                     print('CAKE '*1000)
                 elif pred_class == Labels.PHONE:
                     self.magic_mode = 1
-                    print('>>### PHONE REGISTERED ###<<\n'*5)
+                    print('>>### PHONE REGISTERED ###<<\n'*15)
         return results
 
-    def create_lerp_function(self):
+    def old_create_lerp_function(self):
         """
-        * create mega lerp
-        * LinearRegression^TM (now np.polyfit)
-
-        returns magic scaling function
+        *** DEPRECATED ***
         """
-        assert len(self.list_of_people) > 1, 'Not enough valid bounding boxes' 
+        if not len(self.list_of_people) > 1:
+            raise ValueError('Not enough valid bounding boxes')
+ 
         frame_h_arr = list(range(self.frame_height))
         mega_lerps = []
         bb2s = self.list_of_people[1:] # remove first + copy
@@ -194,29 +179,79 @@ class CalibrationYOLO:
                 line = self.real_magic(frame_h_arr, bb1, bb2, avg_height=self.args.average_height)
                 bb2s.pop(0)
                 if not line[0] > line[-1]:
-                    print('## Removed outlier produced by:', bb1, '-->', bb2)
+                    if self.args.test:
+                        print('## Removed outlier produced by:', bb1, '-->', bb2)
                     continue
                 mega_lerps.append(line)
-        assert len(mega_lerps) > 0, 'Not enough valid lines found' 
+
+
+        if not len(mega_lerps) > 0:
+            raise ValueError('Not enough valid lines found')
+
         mega_lerp = sum(mega_lerps, [])
-        #lerps = len(mega_lerp) // self.frame_height # interger divide -> amount of 'lines'
-        #a,b = np.polyfit(lerps * frame_h_arr, mega_lerp, 1)
         a,b = np.polyfit(len(mega_lerps) * frame_h_arr, mega_lerp, 1)
         magic = lambda x: a*x+b
-
+        weight = len(mega_lerps)
         if self.args.test:
             display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
             display_magic_curve(magic=magic, height=self.frame_height)
 
-        return a,b
+        return a,b,weight
+
+
+    def create_lerp_merge(self, magic=None, weight:Optional[int]=None):
+        """
+        *** NOT DEPRECATED YET ***
+        """
+        if not len(self.list_of_people) > 1:
+            raise ValueError('Not enough valid bounding boxes')
+ 
+        frame_h_arr = list(range(self.frame_height))
+        mega_lerps = []
+        bb2s = self.list_of_people[1:] # remove first + copy
+        for bb1 in self.list_of_people:
+            for bb2 in bb2s:
+                line = self.real_magic(frame_h_arr, bb1, bb2, avg_height=self.args.average_height)
+                bb2s.pop(0)
+                if not line[0] > line[-1]:
+                    if self.args.test:
+                        print('## Removed outlier produced by:', bb1, '-->', bb2)
+                    continue
+                mega_lerps.append(line)
+
+
+        if not len(mega_lerps) > 0:
+            raise ValueError('Not enough valid lines found')
+
+        new_weight = weight
+
+        #incase of recalibration
+        if magic and weight:
+            new_weight += len(mega_lerp)
+            mega_lerps.append(weight*[magic(x) for x in frame_h_arr])
+        
+        mega_lerp = sum(mega_lerps, [])
+        a,b = np.polyfit(len(mega_lerps) * frame_h_arr, mega_lerp, 1)
+        magic = lambda x: a*x+b
+        if self.args.test:
+            display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
+            display_magic_curve(magic=magic, height=self.frame_height)
+
+        return a, b, new_weight
 
 def lerp_engine_stream(stream:cv2.VideoCapture, _args):
+    """  only used for testing """
     args = _args
     if isinstance(args, dict):
         args = AttributeDict(args) # to allow .dot notation
     frame_wh = stream.get(3), stream.get(4)  # float width , height
-    assert args.points and args.average_height, 'Not enough args. fx {"points":8,"average_height":173}'
-    assert frame_wh[0] > 0 and frame_wh[1] > 0, "Stopping due to no video capture available."
+    
+    if not args.points and not args.average_height:
+        raise KeyError('Not enough args. fx {"points":8,"average_height":173}')
+
+    if not frame_wh[0] > 0 and not frame_wh[1] > 0:
+        raise ValueError("Stopping due to no video capture available.")
+
     mbr = CalibrationYOLO(args, *frame_wh)
     print(mbr)
 

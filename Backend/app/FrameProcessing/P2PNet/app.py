@@ -7,11 +7,11 @@ import numpy as np
 from PIL import Image
 import cv2
 try:
-    from .engine import *
-    from .models import build_model
-except:
-    from engine import *
+    #import engine
     from models import build_model
+except:
+    #from . import engine
+    from .models import build_model
 import os
 get_path = lambda *x : os.path.join(os.path.dirname(__file__),*x)
 def get_args_parser():
@@ -97,3 +97,22 @@ def main(img):
     args = parser.parse_args()
     return run(args, img)
 
+if __name__ == "__main__":
+    cap = cv2.VideoCapture(get_path("../benno.mp4"))
+    tick = 0
+    while True:
+        success, frame = cap.read()
+        tick += 1
+        if success:
+            if tick%3==0:
+                tick = 0
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                count, img = main(frame)
+                cv2.imshow("YOLOv8 Inference", img)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+        else:
+            # Break the loop if the end of the video is reached
+            break
+    cap.release()
+    cv2.destroyAllWindows()

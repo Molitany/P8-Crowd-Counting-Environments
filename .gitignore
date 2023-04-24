@@ -440,14 +440,10 @@ google-services.json
 
 # End of https://www.toptal.com/developers/gitignore/api/reactnative,python,visualstudiocode
 crosswalk
-*.mp4
 vgg*.pth
 ShanghaiTech
 img.jpg
 
 #YOLO
 yolov8n.pt
-!Crosswalk.mp4
-!Crosswalk_s.mp4
-!istock-962060884_preview.mp4
-!benno.mp4
+bus.jpg
