@@ -13,6 +13,7 @@ import os
 from shapely.ops import unary_union
 from shapely.geometry import Point, MultiPolygon
 from shapely.geometry.polygon import Polygon
+get_path = lambda *x: os.path.join(os.path.dirname(__file__), *x); 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 USE_TEST_V = '2'
@@ -59,23 +60,23 @@ class MagicFrameProcessor:
         self.__test = test
         self.__use_human_height = force_height
 
-        # public
-        self.__is_calibrating = False
+        # public by property
         self.__mode = 0  # p2p mode
 
         # magic scaling function and current weight
         self.__magic = None  # scale func
         self.__magic_weight = 0  # scale func weight for re-calibration
-        self.__reclaibration_list_size = 10
+        
+        # recalibration
+        self.__continue_recalibration = True # activate recalibration
+        self.__recalibration_image_folder = 'recalibration_dataset'
+        self.__reclaibration_list_size = 0 # starting size of dir
+        self.__clear_images__in_folder(folder=self.__recalibration_image_folder)
 
         # ML persistance objects
         self.__calibration = None  # calibration obj containing YOLOv8
         self.__p2p = None  # prediction object containing PersistentP2P
 
-    @property
-    def is_calibrating(self) -> bool:
-        """ :returns True if the initial calibration is not done. """
-        return self.__is_calibrating
 
     @property
     def current_mode(self) -> int:
@@ -103,12 +104,14 @@ class MagicFrameProcessor:
 
         if not self.__magic:  # change todo re-calibration
             return False, *self.__calibrate(frame=frame)
-        elif len(self.__reclaibration_list_size) > 10:
-            self.__perform_recalibration()
+        elif self.__continue_recalibration:
+            out_frame = self.__perform_recalibration(frame)
+            return False, -1, out_frame
+            
 
         count, head_coords = self.__find_heads(frame=frame)
         multi_polygon = self.__create_squares(frame, head_coords)
-        alert: bool = multi_polygon.area > 0.1 * (frame.shape[0]*frame.shape[1]) #TODO comments + un-magic
+        alert: bool = multi_polygon.area > 0.1 * (width*height) #TODO de-magic
 
         if style == 1:
             frame = self.__show_squares(frame, multi_polygon)
@@ -137,7 +140,6 @@ class MagicFrameProcessor:
 
         :return Tuple (signal:int, frame:numpy.ndarray)
         """
-        self.__is_calibrating = True
         if not self.__calibration:
             args = dict(
                 {'test': self.__test, 'average_height': self.__use_human_height})
@@ -148,9 +150,8 @@ class MagicFrameProcessor:
         annotated_frame = res[0].plot()
 
         if self.__calibration.size >= sample_points:
-            self.__is_calibrating = False
-            self.__magic_weight += 1
-            a, b = self.__calibration.create_lerp_function()
+            a, b, weight = self.__calibration.create_lerp_merge()
+            self.__magic_weight = weight
             if self.__test:
                 print(f'### Function a={a} and b={b}')
             self.__magic = lambda x: a*x+b
@@ -161,6 +162,51 @@ class MagicFrameProcessor:
 
             # do the magic func merge dance here probably..
         return -1, annotated_frame
+
+    def __perform_recalibration(self, frame:np.ndarray):
+        self.__reclaibration_list_size += 1
+        cv2.imwrite(get_path(self.__recalibration_image_folder,'recali_{}.png'.format(self.__reclaibration_list_size)))
+        
+        if not len(self.__reclaibration_list_size) >= 10: # recali if 10 imgs
+            return
+        
+        yield cv2.putText(img=frame, text="Starting\nrecalibration..", org=(5,5),fontFace=3, fontScale=3, color=(0,0,255), thickness=5)
+        
+        # cleanup
+        self.__p2p = None # kick from server
+        gc.collect()
+        torch.cuda.empty_cache()
+        #reup
+        args = dict({'test': self.__test, 'average_height': self.__use_human_height})
+        frame_wh = frame.shape[1], frame.shape[0]  # float width , height
+        self.__calibration = CalibrationYOLO(args, *frame_wh)
+        #recali
+        for diritem in os.listdir(get_path(self.__recalibration_image_folder)):
+            saved_image = cv2.imread(get_path(self.__recalibration_image_folder, diritem))
+            res = self.__calibration.extract_entities(frame=saved_image)
+            if self.__test:
+                annotated_res = res[0].plot()
+                cv2.imshow('Calibration-Go-Fast', annotated_res)
+        a, b, new_weight = self.__calibration.create_lerp_merge(self.__magic, self.__magic_weight)
+        self.__magic = lambda x: a*x+b
+        self.__magic_weight = new_weight
+
+        #cleanup
+        self.__calibration = None
+        gc.collect()
+        torch.cuda.empty_cache()
+        if self.__test:
+            print(f'### New recalibrated function a={a} and b={b} (weight={new_weight})')
+        
+        # reset / stop recali
+        self.__continue_recalibration = False
+        self.__reclaibration_list_size = 0
+        self.__clear_images__in_folder(folder=self.__recalibration_image_folder)
+
+        return
+
+    def __clear_images__in_folder(self, folder):
+        os.system('rm {}'.format(get_path(folder,'*.png'))) # remove all png in recalibration folder.
 
     def __find_heads(self, frame: np.ndarray):
         """ 

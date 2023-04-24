@@ -1,7 +1,7 @@
 from scipy import interpolate
 from ultralytics import YOLO
 from enum import IntEnum
-from typing import List
+from typing import List, Optional
 import numpy as np
 import argparse
 import math
@@ -164,12 +164,9 @@ class CalibrationYOLO:
                     print('>>### PHONE REGISTERED ###<<\n'*15)
         return results
 
-    def create_lerp_function(self):
+    def old_create_lerp_function(self):
         """
-        * create mega lerp
-        * LinearRegression^TM (now np.polyfit)
-
-        returns magic scaling function
+        *** DEPRECATED ***
         """
         if not len(self.list_of_people) > 1:
             raise ValueError('Not enough valid bounding boxes')
@@ -194,12 +191,53 @@ class CalibrationYOLO:
         mega_lerp = sum(mega_lerps, [])
         a,b = np.polyfit(len(mega_lerps) * frame_h_arr, mega_lerp, 1)
         magic = lambda x: a*x+b
-
+        weight = len(mega_lerps)
         if self.args.test:
             display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
             display_magic_curve(magic=magic, height=self.frame_height)
 
-        return a,b
+        return a,b,weight
+
+
+    def create_lerp_merge(self, magic=None, weight:Optional[int]=None):
+        """
+        *** NOT DEPRECATED YET ***
+        """
+        if not len(self.list_of_people) > 1:
+            raise ValueError('Not enough valid bounding boxes')
+ 
+        frame_h_arr = list(range(self.frame_height))
+        mega_lerps = []
+        bb2s = self.list_of_people[1:] # remove first + copy
+        for bb1 in self.list_of_people:
+            for bb2 in bb2s:
+                line = self.real_magic(frame_h_arr, bb1, bb2, avg_height=self.args.average_height)
+                bb2s.pop(0)
+                if not line[0] > line[-1]:
+                    if self.args.test:
+                        print('## Removed outlier produced by:', bb1, '-->', bb2)
+                    continue
+                mega_lerps.append(line)
+
+
+        if not len(mega_lerps) > 0:
+            raise ValueError('Not enough valid lines found')
+
+        new_weight = weight
+
+        #incase of recalibration
+        if magic and weight:
+            new_weight += len(mega_lerp)
+            mega_lerps.append(weight*[magic(x) for x in frame_h_arr])
+        
+        mega_lerp = sum(mega_lerps, [])
+        a,b = np.polyfit(len(mega_lerps) * frame_h_arr, mega_lerp, 1)
+        magic = lambda x: a*x+b
+        if self.args.test:
+            display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
+            display_magic_curve(magic=magic, height=self.frame_height)
+
+        return a, b, new_weight
 
 def lerp_engine_stream(stream:cv2.VideoCapture, _args):
     """  only used for testing """
