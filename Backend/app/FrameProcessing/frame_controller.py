@@ -14,9 +14,11 @@ from shapely.ops import unary_union
 from shapely.geometry import Point, MultiPolygon
 from shapely.geometry.polygon import Polygon
 get_path = lambda *x: os.path.join(os.path.dirname(__file__), *x); 
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
-
-USE_TEST_V = '2'
+#os.environ['CUDA_VISIBLE_DEVICES'] = ''
+if os.path.exists(get_path('bus.jpg')):
+    print("WARNING 'source' is found. Removing bus.jpg")
+    os.remove(get_path('bus.jpg'))
+USE_TEST_V = 'full'
 test_vids = {
     'benno': {
         'path': 'videos/benno.mp4',
@@ -105,8 +107,8 @@ class MagicFrameProcessor:
         if not self.__magic:  # change todo re-calibration
             return False, *self.__calibrate(frame=frame)
         elif self.__continue_recalibration:
-            out_frame = self.__perform_recalibration(frame)
-            return False, -1, out_frame
+            self.__perform_recalibration(frame)
+            
             
 
         count, head_coords = self.__find_heads(frame=frame)
@@ -165,12 +167,12 @@ class MagicFrameProcessor:
 
     def __perform_recalibration(self, frame:np.ndarray):
         self.__reclaibration_list_size += 1
-        cv2.imwrite(get_path(self.__recalibration_image_folder,'recali_{}.png'.format(self.__reclaibration_list_size)))
+        cv2.imwrite(get_path(self.__recalibration_image_folder,'recali_{}.png'.format(self.__reclaibration_list_size)), frame)
         
-        if not len(self.__reclaibration_list_size) >= 10: # recali if 10 imgs
+        if self.__reclaibration_list_size < 100: # recali if 10 imgs
             return
         
-        yield cv2.putText(img=frame, text="Starting\nrecalibration..", org=(5,5),fontFace=3, fontScale=3, color=(0,0,255), thickness=5)
+        #yield cv2.putText(img=frame, text="Starting\nrecalibration..", org=(5,5),fontFace=3, fontScale=3, color=(0,0,255), thickness=5)
         
         # cleanup
         self.__p2p = None # kick from server
@@ -185,8 +187,11 @@ class MagicFrameProcessor:
             saved_image = cv2.imread(get_path(self.__recalibration_image_folder, diritem))
             res = self.__calibration.extract_entities(frame=saved_image)
             if self.__test:
-                annotated_res = res[0].plot()
-                cv2.imshow('Calibration-Go-Fast', annotated_res)
+                annotated_frame = res[0].plot()
+                annotated_frame = cv2.putText(img=annotated_frame, text="Starting recalibration...", org=(5,frame.shape[0]//2),fontFace=3, fontScale=1, color=(0,0,255), thickness=2)
+                cv2.imshow("YOLOv8 Inference", annotated_frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
         a, b, new_weight = self.__calibration.create_lerp_merge(self.__magic, self.__magic_weight)
         self.__magic = lambda x: a*x+b
         self.__magic_weight = new_weight
@@ -197,7 +202,6 @@ class MagicFrameProcessor:
         torch.cuda.empty_cache()
         if self.__test:
             print(f'### New recalibrated function a={a} and b={b} (weight={new_weight})')
-        
         # reset / stop recali
         self.__continue_recalibration = False
         self.__reclaibration_list_size = 0
@@ -206,7 +210,8 @@ class MagicFrameProcessor:
         return
 
     def __clear_images__in_folder(self, folder):
-        os.system('rm {}'.format(get_path(folder,'*.png'))) # remove all png in recalibration folder.
+        [os.remove(get_path(folder, file)) for file in os.listdir(get_path(folder)) if file.endswith('.png')] # but good
+        #os.system('rm {}'.format(get_path(folder,'*.png'))) # remove all png in recalibration folder.
 
     def __find_heads(self, frame: np.ndarray):
         """ 
@@ -319,13 +324,13 @@ class MagicFrameProcessor:
 
 if __name__ == '__main__':
     cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
-    magic = MagicFrameProcessor(test=False)
+    magic = MagicFrameProcessor(test=True)
     tick = 0
     while True:
         success, frame = cap.read()
         tick += 1
         if success:
-            if tick % 3 == 0:
+            if tick % 5 == 0:
                 tick = 0
                 trigger, count, img = magic.process(frame=frame)
 
