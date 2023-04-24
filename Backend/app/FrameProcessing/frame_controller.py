@@ -66,6 +66,7 @@ class MagicFrameProcessor:
         # magic scaling function and current weight
         self.__magic = None  # scale func
         self.__magic_weight = 0  # scale func weight for re-calibration
+        self.__reclaibration_list_size = 10
 
         # ML persistance objects
         self.__calibration = None  # calibration obj containing YOLOv8
@@ -89,7 +90,7 @@ class MagicFrameProcessor:
         This is used to create a heatmap.
 
         :arg frame is an image as a numpy array.
-        :arg style is an integer between 1-3. 1=overlayed-heatmap, 2=raw-heatmap, 3=dotted-heads.
+        :arg style is an integer between 1-5. 1=squares, 2=squares+dotted-heads, 3=dotted-heads, 4=overlayed-heatmap, 5=raw-heatmap.
         :return Tuple (alert:bool, count:int, heatmap:numpy.ndarray)
 
         :throws ValueError on arg style out-of-range.
@@ -102,13 +103,17 @@ class MagicFrameProcessor:
 
         if not self.__magic:  # change todo re-calibration
             return False, *self.__calibrate(frame=frame)
+        elif len(self.__reclaibration_list_size) > 10:
+            self.__perform_recalibration()
 
         count, head_coords = self.__find_heads(frame=frame)
+        multi_polygon = self.__create_squares(frame, head_coords)
+        alert: bool = multi_polygon.area > 0.1 * (frame.shape[0]*frame.shape[1]) #TODO comments + un-magic
 
         if style == 1:
-            frame = self.__create_squares(frame, head_coords)
-        if style == 2:
-            frame = self.__create_squares(frame, head_coords)
+            frame = self.__show_squares(frame, multi_polygon)
+        elif style == 2:
+            frame = self.__show_squares(frame, multi_polygon)
             frame = self.__show_heads(frame, head_coords)
         elif style == 3:
             frame = self.__show_heads(frame, head_coords)
@@ -120,7 +125,6 @@ class MagicFrameProcessor:
         else:
             raise ValueError('Out of range ')
 
-        alert: bool = False
         return alert, count, frame
 
     def __calibrate(self, frame: np.ndarray, sample_points=6) -> Tuple[int, np.ndarray]:
@@ -207,16 +211,15 @@ class MagicFrameProcessor:
         trigger_polygons = self.__get_trigger_polygons(head_coords)
         # take union of polygons so only outer line is shown
         cu = unary_union(trigger_polygons)
+        cu:MultiPolygon = cu if type(cu) is MultiPolygon else MultiPolygon([cu])
+        return cu
+
+    def __show_squares(self, frame:np.ndarray, multipoly:MultiPolygon) -> np.ndarray:
         # convert list of x and list of y to list of x,y to integer
         def int_coords(x): return np.array(x).round().astype(np.int32)
-        if not cu.is_empty:
-            if type(cu) is MultiPolygon:      
-                for geom in cu.geoms:
-                    frame = cv2.polylines(
-                        frame, [int_coords(geom.exterior.coords)], 1, (0, 0, 255), 2)
-            else:
-                frame = cv2.polylines(
-                    frame, [int_coords(cu.exterior.coords)], 1, (0, 0, 255), 2)
+        if not multipoly.is_empty:
+            for geom in multipoly.geoms:
+                frame = cv2.polylines(frame, [int_coords(geom.exterior.coords)], 1, (0, 0, 255), 2)
         return frame
 
     def __create_heatmap(self, frame: np.ndarray, points: List[List[float]], overlay: bool = False) -> np.ndarray:
