@@ -81,7 +81,7 @@ class MagicFrameProcessor:
         """ :returns the operation mode set by the calibration. """
         return self.__mode
 
-    def process(self, frame: np.ndarray, style: int = 1) -> Tuple[bool, int, np.ndarray]:
+    def process(self, frame: np.ndarray, style: int = 2) -> Tuple[bool, int, np.ndarray]:
         """
         This is the main function. It takes an image array and scales the image to a multiple of 128.
         Then if there is no calibration, the image is fed to the YOLO calibration object.
@@ -105,27 +105,20 @@ class MagicFrameProcessor:
 
         count, head_coords = self.__find_heads(frame=frame)
 
-        trigger_polygons = self.__get_trigger_polygons(head_coords)
-        # take union of polygons so only outer line is shown
-        cu = unary_union(trigger_polygons)
-        # convert list of x and list of y to list of x,y to integer
-        def int_coords(x): return np.array(x).round().astype(np.int32)
-        if not cu.is_empty:
-            if type(cu) is MultiPolygon:
-                for geom in cu.geoms:
-                    frame = cv2.polylines(
-                        frame, [int_coords(geom.exterior.coords)], 1, (0, 0, 255), 2)
-            else:
-                frame = cv2.polylines(
-                    frame, [int_coords(cu.exterior.coords)], 1, (0, 0, 255), 2)
-        # if style == 1:
-        #     heatmap = self.__create_heatmap(frame, head_coords, overlay=True)
-        # elif style == 2:
-        #     heatmap = self.__create_heatmap(frame, head_coords, overlay=False)
-        # elif style == 3:
-        #     heatmap = self.__show_heads(frame, head_coords)
-        # else:
-        #     raise ValueError('Out of range ')
+        if style == 1:
+            frame = self.__create_squares(frame, head_coords)
+        if style == 2:
+            frame = self.__create_squares(frame, head_coords)
+            frame = self.__show_heads(frame, head_coords)
+        elif style == 3:
+            frame = self.__show_heads(frame, head_coords)
+        elif style == 4:
+            frame = self.__create_heatmap(frame, head_coords, overlay=True)
+        elif style == 5:
+            frame = self.__create_heatmap(frame, head_coords, overlay=False)
+
+        else:
+            raise ValueError('Out of range ')
 
         alert: bool = False
         return alert, count, frame
@@ -209,6 +202,22 @@ class MagicFrameProcessor:
             img_to_draw = cv2.circle(
                 frame, (int(p[0]), int(p[1])), int(2), (0, 0, 255), -1)
         return img_to_draw
+
+    def __create_squares(self, frame, head_coords: List[List[float]]):
+        trigger_polygons = self.__get_trigger_polygons(head_coords)
+        # take union of polygons so only outer line is shown
+        cu = unary_union(trigger_polygons)
+        # convert list of x and list of y to list of x,y to integer
+        def int_coords(x): return np.array(x).round().astype(np.int32)
+        if not cu.is_empty:
+            if type(cu) is MultiPolygon:      
+                for geom in cu.geoms:
+                    frame = cv2.polylines(
+                        frame, [int_coords(geom.exterior.coords)], 1, (0, 0, 255), 2)
+            else:
+                frame = cv2.polylines(
+                    frame, [int_coords(cu.exterior.coords)], 1, (0, 0, 255), 2)
+        return frame
 
     def __create_heatmap(self, frame: np.ndarray, points: List[List[float]], overlay: bool = False) -> np.ndarray:
         # draw the predictions
