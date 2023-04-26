@@ -120,7 +120,7 @@ def start_P2P():
     try:
     # Execute the p2p function asynchronously and return a future object
         executor.submit(P2P)
-    finally:
+    finally: #currently this does nothing. Hoped to fix the thread not terminating on MacOS.
         executor.shutdown(False)
 # Start the seperate thread with the P2P function
 start_P2P()
