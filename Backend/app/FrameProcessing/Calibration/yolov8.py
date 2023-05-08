@@ -43,8 +43,8 @@ def display_magic_curve(magic, height:int):
     x = [magic(y) for y in range(int(height))]
     plt.plot(x)
     plt.title('Line graph')
-    plt.xlabel('image height')
-    plt.ylabel('magic number (cm/pixel)')
+    plt.xlabel('image height (pixel)')
+    plt.ylabel('inverse linear relationship (cm/pixel)')
     plt.show()
 
 def display_lerps(lerps, pred, x):
@@ -54,9 +54,10 @@ def display_lerps(lerps, pred, x):
     for i in lerps:
         #plt.scatter(x, i, color="black")
         plt.plot(x, i, color="black")
+    plt.title('Line graph')
+    plt.xlabel('image height (pixel)')
+    plt.ylabel('inverse linear relationship (cm/pixel)')
     plt.plot(x, pred, color="blue", linewidth=1)
-    plt.xticks(())
-    plt.yticks(())
     plt.show()
 
 class BoundingBox:
