@@ -35,6 +35,16 @@ class Labels(IntEnum):
     def get_all(cls):
         return [x.value for x in list(cls)]
 
+def display_magic_t_curve(list_a):
+    import matplotlib
+    matplotlib.use('tkagg')
+    import matplotlib.pyplot as plt
+    x = list_a
+    plt.plot(x)
+    plt.title('Line graph')
+    plt.xlabel('Time')
+    plt.ylabel('a')
+    plt.show()
 
 def display_magic_curve(magic, height:int):
     import matplotlib

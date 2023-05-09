@@ -1,5 +1,5 @@
 try:
-    from Calibration import CalibrationYOLO
+    from Calibration import CalibrationYOLO, display_magic_t_curve
     from P2PNet import PersistentP2P
 except:
     from . import CalibrationYOLO
@@ -68,7 +68,8 @@ class MagicFrameProcessor:
         # magic scaling function and current weight
         self.__magic = None  # scale func
         self.__magic_weight = 0  # scale func weight for re-calibration
-        
+        self.__magic_t = [] # a over time
+
         # recalibration
         self.__continue_recalibration = True # activate recalibration
         self.__recalibration_image_folder = 'recalibration_dataset'
@@ -79,6 +80,9 @@ class MagicFrameProcessor:
         self.__calibration = None  # calibration obj containing YOLOv8
         self.__p2p = None  # prediction object containing PersistentP2P
 
+    def __del__(self):
+        if self.__test:
+            display_magic_t_curve(self.__magic_t)
 
     @property
     def current_mode(self) -> int:
@@ -156,6 +160,7 @@ class MagicFrameProcessor:
             self.__magic_weight = weight
             if self.__test:
                 print(f'### Function a={a} and b={b}')
+            self.__magic_t.append(a)
             self.__magic = lambda x: a*x+b
             self.__mode = self.__calibration.mode
             self.__calibration = None  # remove YOLO from memory
@@ -169,7 +174,7 @@ class MagicFrameProcessor:
         self.__reclaibration_list_size += 1
         cv2.imwrite(get_path(self.__recalibration_image_folder,'recali_{}.png'.format(self.__reclaibration_list_size)), frame)
         
-        if self.__reclaibration_list_size < 100: # recali if 10 imgs
+        if self.__reclaibration_list_size < 100: # recali if x imgs
             return
         
         #yield cv2.putText(img=frame, text="Starting\nrecalibration..", org=(5,5),fontFace=3, fontScale=3, color=(0,0,255), thickness=5)
@@ -193,6 +198,7 @@ class MagicFrameProcessor:
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
         a, b, new_weight = self.__calibration.create_lerp_merge(self.__magic, self.__magic_weight)
+        self.__magic_t.append(a)
         self.__magic = lambda x: a*x+b
         self.__magic_weight = new_weight
 
