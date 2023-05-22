@@ -11,7 +11,7 @@
             "program": "frame_controller.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "${workspaceFolder}/Backend/FrameProcessing"
+            "cwd": "${workspaceFolder}/Backend/app/FrameProcessing"
         }
     ]
 }
