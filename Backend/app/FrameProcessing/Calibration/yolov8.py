@@ -35,6 +35,16 @@ class Labels(IntEnum):
     def get_all(cls):
         return [x.value for x in list(cls)]
 
+def display_magic_t_curve(list_a):
+    import matplotlib
+    matplotlib.use('tkagg')
+    import matplotlib.pyplot as plt
+    x = list_a
+    plt.plot(x)
+    plt.title('Slope of lerp over time')
+    plt.xlabel('Time')
+    plt.ylabel('a')
+    plt.show()
 
 def display_magic_curve(magic, height:int):
     import matplotlib
@@ -42,9 +52,9 @@ def display_magic_curve(magic, height:int):
     import matplotlib.pyplot as plt
     x = [magic(y) for y in range(int(height))]
     plt.plot(x)
-    plt.title('Line graph')
-    plt.xlabel('image height (pixel)')
-    plt.ylabel('inverse linear relationship (cm/pixel)')
+    plt.title('Final lerp')
+    plt.xlabel('Image height (pixel)')
+    plt.ylabel('Inverse linear relationship (cm/pixel)')
     plt.show()
 
 def display_lerps(lerps, pred, x):
@@ -54,9 +64,9 @@ def display_lerps(lerps, pred, x):
     for i in lerps:
         #plt.scatter(x, i, color="black")
         plt.plot(x, i, color="black")
-    plt.title('Line graph')
-    plt.xlabel('image height (pixel)')
-    plt.ylabel('inverse linear relationship (cm/pixel)')
+    plt.title('All lerps')
+    plt.xlabel('Image height (pixel)')
+    plt.ylabel('Inverse linear relationship (cm/pixel)')
     plt.plot(x, pred, color="blue", linewidth=1)
     plt.show()
 
@@ -224,17 +234,20 @@ class CalibrationYOLO:
         if not len(mega_lerps) > 0:
             raise ValueError('Not enough valid lines found')
 
-        new_weight = weight
+        new_weight = weight or len(mega_lerps)
 
         #incase of recalibration
-        if magic and weight:
-            new_weight += len(mega_lerp)
-            mega_lerps.append(weight*[magic(x) for x in frame_h_arr])
-        
+        if magic:
+            #mega_lerps.extend(new_weight*[[magic(x) for x in frame_h_arr]])
+            new_weight += len(mega_lerps)
+            for __ in range(1, weight or 2):
+                m = [magic(x) for x in frame_h_arr]
+                mega_lerps.append(m)
+
         mega_lerp = sum(mega_lerps, [])
         a,b = np.polyfit(len(mega_lerps) * frame_h_arr, mega_lerp, 1)
-        magic = lambda x: a*x+b
         if self.args.test:
+            magic = lambda x: a*x+b
             display_lerps(mega_lerps, [magic(x) for x in frame_h_arr], frame_h_arr)
             display_magic_curve(magic=magic, height=self.frame_height)
 

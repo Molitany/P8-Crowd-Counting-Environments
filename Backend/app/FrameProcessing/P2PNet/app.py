@@ -36,7 +36,7 @@ def get_args_parser():
     return parser
 
 def run(args, img):
-    device_name = 'cpu'
+    device_name = 'cuda'
     device = torch.device(device_name) #TODO: add gpu support here
     # get the P2PNet
     model = build_model(args)
