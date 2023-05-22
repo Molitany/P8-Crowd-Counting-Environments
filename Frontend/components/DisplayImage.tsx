@@ -2,7 +2,6 @@ import React, { useEffect, useState,useRef } from 'react'
 import { View, Image, StyleSheet, Text, Button, Dimensions} from 'react-native';
 import NumberToShow from './NumberToShow';
 
-const { width, height } = Dimensions.get('window');
 
 const DisplayImage = () => {
     //useRef to have the webSocket asscessible in this scope.
@@ -45,6 +44,13 @@ const DisplayImage = () => {
         websocketRef.current = ws;
     }, []
     )
+    useEffect(() => {
+        fetch("localhost:8000").then(res=>{
+            debugger;
+        }).catch(res => {
+            debugger;
+        })
+    },[])
     /* Found out i dont actually need this promise but im keeping it just incase something later do.
     const asyncSetImage = (js: { image: string }): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -114,11 +120,7 @@ const DisplayImage = () => {
                         title="Send to server"
                         color="#241584"
                         accessibilityLabel="Learn more about this purple button" />
-                    <Image
-                        style={styles.picture}
-                        resizeMode="contain"
-
-                        source={require('../assets/images/testPictureDDD.png')} />
+                    
                 </View>
             )
         }
@@ -128,7 +130,7 @@ const DisplayImage = () => {
             {connectedToServer ? (
                 <ImageToDisplay />
             ) : (
-                <Text style={{ color: '#fff' }}>not connected</Text>
+                <Text style={{ color: '#fff' }}>{serverState}</Text>
             )
             }
         </View>
@@ -143,8 +145,8 @@ const styles = StyleSheet.create({
         paddingTop: 50,
     },
     picture: {
-        width: width,
-        height: height,
+        width: "75vw",
+        height: "75vh",
     
     }
 })

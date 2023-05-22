@@ -2,12 +2,12 @@ import json
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from app.core.config import settings
+from core.config import settings
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image as im
 import cv2
-from . import MagicFrameProcessor
-
+from FrameProcessing import MagicFrameProcessor
+import uvicorn
 import pandas as pd
 import asyncio
 import base64
@@ -86,7 +86,7 @@ def frame_processing_handler():
     while True:
         success, frame = cap.read()
         if success:
-            count, img = magic.process(frame=frame)
+            alert, count, img = magic.process(frame=frame)
             if testCount % 20 == 0:
                 #make sure the image 
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -125,3 +125,6 @@ def start_frame_processing():
         executor.shutdown(False)
 # Start the seperate thread with the P2P function
 start_frame_processing()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
