@@ -15,7 +15,7 @@ from shapely.geometry import Point, MultiPolygon
 from shapely.geometry.polygon import Polygon
 import atexit
 get_path = lambda *x: os.path.join(os.path.dirname(__file__), *x); 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 if os.path.exists(get_path('bus.jpg')):
     print("WARNING 'source' is found. Removing bus.jpg")
     os.remove(get_path('bus.jpg'))
@@ -147,7 +147,7 @@ class MagicFrameProcessor:
             return False, *self.__calibrate(frame=frame)
         elif self.__continue_recalibration:
             self.__perform_recalibration(frame)
-            
+    
             
 
         count, head_coords = self.__find_heads(frame=frame)

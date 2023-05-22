@@ -1,16 +1,17 @@
 import json
-import time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from app.core.config import settings
+from core.config import settings
 from concurrent.futures import ThreadPoolExecutor
+from PIL import Image as im
 import cv2
-from . import MagicFrameProcessor
-
+from FrameProcessing import MagicFrameProcessor
+import uvicorn
 import pandas as pd
 import asyncio
 import base64
+from io import BytesIO
 
 def get_application():
     _app = FastAPI(
@@ -46,10 +47,10 @@ class ConnectionManager:
     async def sendJson(self, message:json,websocket:WebSocket):
         await websocket.send_json(message)
 
-    async def broadcastWarning(self, message:str):
+    async def broadcastWarning(self, message:str,count:int):
         try:
             for connection in self.active_connections:
-                await connection.send_json({"warning": message})
+                await connection.send_json({"warning": message,"count" : count})
         except Exception as e:
             print(e)
 
@@ -72,62 +73,58 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             print("received text")
-            try: 
-                with open("app/testPictureK.png", "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                    await manager.sendJson({"image" :encoded_string},websocket)
-            except Exception as e:
-                print('error [[', e,']] Websocket will now be closed')
-                manager.disconnect(websocket)
-                break
-            await asyncio.sleep(5)
-            try: 
-                with open("app/testPictureMK.png", "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-                    await manager.sendJson({"image" :encoded_string},websocket)
-                    
-            except Exception as e:
-                print('error [[', e,']] websocket will now be closed')
-                manager.disconnect(websocket)
-                break
+            
     except WebSocketDisconnect: 
         manager.disconnect(websocket)
         print("Client Disconnected")
 
-def P2P2():
+def frame_processing_handler():
     cap = cv2.VideoCapture(0)
     magic = MagicFrameProcessor()
+    # Only for testing purposes remove later
+    testCount = 0
     while True:
         success, frame = cap.read()
         if success:
-            count, img = magic.process(frame=frame)
+            alert, count, img = magic.process(frame=frame)
+            if testCount % 20 == 0:
+                #make sure the image 
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                #get an image from the numpy array
+                image = im.fromarray(img)
+                #create a buffer to store the image
+                buffer = BytesIO()
+                #save the image in the buffer in PNG format
+                image.save(buffer,format="PNG")
+                #Encode the binary data to a base64 string
+                image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-            cv2.imshow("Video out", img)
+                # Make a new event loop and call this function.
+                asyncio.run(manager.broadcastWarning(image_base64,count))
+
+            #cv2.imshow("Video out", img)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
         else:
             # Break the loop if the end of the video is reached
             break
+        testCount+=1
+
     cap.release()
     cv2.destroyAllWindows()        
 
-def P2P():
-    while True:
-        time.sleep(5)
-        #This creates a new event loop to broadcast Warnining, might now be efficent but I don't know enough about event loops to fix it right now
-        asyncio.run(manager.broadcastWarning("TEST"))
-        print("Sent Warning")
+
 
 executor = ThreadPoolExecutor()
+# chedules the function to run in a different thread
+def start_frame_processing():
+    try:
+    # Execute the p2p function asynchronously and return a future object
+        executor.submit(frame_processing_handler)
+    finally: #currently this does nothing. Hoped to fix the thread not terminating on MacOS.
+        executor.shutdown(False)
+# Start the seperate thread with the P2P function
+start_frame_processing()
 
-def start_P2P():
-    executor.submit(P2P)
-
-start_P2P()
-    
-# loop = asyncio.get_event_loop()
-
-# if not loop.is_running():
-#     loop.run_until_complete(P2P())
-# else: 
-#     loop.create_task(P2P())
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -8,10 +8,10 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "frame_controller.py",
+            "program": "app/main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "${workspaceFolder}/Backend/app/FrameProcessing"
+            "cwd": "${workspaceFolder}/Backend"
         }
     ]
 }
