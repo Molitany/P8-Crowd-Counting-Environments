@@ -13,12 +13,13 @@ import os
 from shapely.ops import unary_union
 from shapely.geometry import Point, MultiPolygon
 from shapely.geometry.polygon import Polygon
+import atexit
 get_path = lambda *x: os.path.join(os.path.dirname(__file__), *x); 
-#os.environ['CUDA_VISIBLE_DEVICES'] = ''
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 if os.path.exists(get_path('bus.jpg')):
     print("WARNING 'source' is found. Removing bus.jpg")
     os.remove(get_path('bus.jpg'))
-USE_TEST_V = 'full'
+    
 test_vids = {
     'benno': {
         'path': 'videos/benno.mp4',
@@ -37,6 +38,30 @@ test_vids = {
     },
     '2': {
         'path': 'videos/2.mp4',
+    },
+    'Experiment_1': {
+        'path': 'videos/Experiment_1.mp4',
+    },
+    'Experiment_2': {
+        'path': 'videos/Experiment_2.mp4',
+    },
+    'Experiment_1_speed': {
+        'path': 'videos/Experiment_1_speed.mp4',
+    },
+    'Experiment_2_speed': {
+        'path': 'videos/Experiment_2_speed.mp4',
+    },
+    'Experiment_2_480p': {
+        'path': 'videos/Experiment_2_480p.mp4',
+    },
+    'Experiment_1_480p': {
+        'path': 'videos/Experiment_1_480p.mp4',
+    },
+    'Expriment_1_480p_no_square_people': {
+        'path': 'videos/Expriment_1_480p_no_square_people.mp4',
+    },
+    'Expriment_2_480p_no_square_people': {
+        'path': 'videos/Expriment_2_480p_no_square_people.mp4',
     }
 }
 
@@ -57,10 +82,11 @@ class MagicFrameProcessor:
     - image pipeline entry.
     """
 
-    def __init__(self, test: bool = False, force_height: int = 172) -> None:
+    def __init__(self, test: bool = False, force_height: int = 172, frames_for_recalibration=100, show_metrics=True, continues_recalibration=False) -> None:
         # calibration args
         self.__test = test
         self.__use_human_height = force_height
+        self.__show_metrics = show_metrics
 
         # public by property
         self.__mode = 0  # p2p mode
@@ -69,19 +95,28 @@ class MagicFrameProcessor:
         self.__magic = None  # scale func
         self.__magic_weight = 0  # scale func weight for re-calibration
         self.__magic_t = [] # a over time
+        self.__magic_weights_t = [] # weight over time
 
         # recalibration
         self.__continue_recalibration = True # activate recalibration
+        self.__frames_for_recalibration = frames_for_recalibration
         self.__recalibration_image_folder = 'recalibration_dataset'
         self.__reclaibration_list_size = 0 # starting size of dir
+        self.continues_recalibration = continues_recalibration
         self.__clear_images__in_folder(folder=self.__recalibration_image_folder)
+        self.__frame_list = []
 
         # ML persistance objects
         self.__calibration = None  # calibration obj containing YOLOv8
         self.__p2p = None  # prediction object containing PersistentP2P
 
-    def __del__(self):
-        if self.__test:
+        # idk - del function
+        atexit.register(self.__close)
+
+    def __close(self):
+        if self.__show_metrics:
+            print('Magic a/time',self.__magic_t)
+            print('Magic weights',self.__magic_weights_t)
             display_magic_t_curve(self.__magic_t)
 
     @property
@@ -161,6 +196,7 @@ class MagicFrameProcessor:
             if self.__test:
                 print(f'### Function a={a} and b={b}')
             self.__magic_t.append(a)
+            self.__magic_weights_t.append(weight)
             self.__magic = lambda x: a*x+b
             self.__mode = self.__calibration.mode
             self.__calibration = None  # remove YOLO from memory
@@ -171,10 +207,11 @@ class MagicFrameProcessor:
         return -1, annotated_frame
 
     def __perform_recalibration(self, frame:np.ndarray):
-        self.__reclaibration_list_size += 1
-        cv2.imwrite(get_path(self.__recalibration_image_folder,'recali_{}.png'.format(self.__reclaibration_list_size)), frame)
+        #self.__reclaibration_list_size += 1
+        self.__frame_list.append(frame)
+        #cv2.imwrite(get_path(self.__recalibration_image_folder,'recali_{}.png'.format(self.__reclaibration_list_size)), frame)
         
-        if self.__reclaibration_list_size < 100: # recali if x imgs
+        if len(self.__frame_list) < self.__frames_for_recalibration: # recali if x imgs
             return
         
         #yield cv2.putText(img=frame, text="Starting\nrecalibration..", org=(5,5),fontFace=3, fontScale=3, color=(0,0,255), thickness=5)
@@ -188,28 +225,35 @@ class MagicFrameProcessor:
         frame_wh = frame.shape[1], frame.shape[0]  # float width , height
         self.__calibration = CalibrationYOLO(args, *frame_wh)
         #recali
-        for diritem in os.listdir(get_path(self.__recalibration_image_folder)):
-            saved_image = cv2.imread(get_path(self.__recalibration_image_folder, diritem))
-            res = self.__calibration.extract_entities(frame=saved_image)
+        #for diritem in os.listdir(get_path(self.__recalibration_image_folder)):
+        for frame_elem in self.__frame_list:
+            #saved_image = cv2.imread(get_path(self.__recalibration_image_folder, diritem))
+            res = self.__calibration.extract_entities(frame=frame_elem)
             if self.__test:
                 annotated_frame = res[0].plot()
                 annotated_frame = cv2.putText(img=annotated_frame, text="Starting recalibration...", org=(5,frame.shape[0]//2),fontFace=3, fontScale=1, color=(0,0,255), thickness=2)
                 cv2.imshow("YOLOv8 Inference", annotated_frame)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
-        a, b, new_weight = self.__calibration.create_lerp_merge(self.__magic, self.__magic_weight)
-        self.__magic_t.append(a)
-        self.__magic = lambda x: a*x+b
-        self.__magic_weight = new_weight
-
+        try:
+            a, b, new_weight = self.__calibration.create_lerp_merge(self.__magic, self.__magic_weight)
+            self.__magic_t.append(a)
+            self.__magic_weights_t.append(new_weight)
+            self.__magic = lambda x: a*x+b
+            self.__magic_weight = new_weight
+            if self.__test or self.__show_metrics:
+                print(f'### New recalibrated function a={a} and b={b} (weight={new_weight})')
+        except ValueError as e :
+            print(e)
+            #input('Continue...?')
         #cleanup
         self.__calibration = None
         gc.collect()
         torch.cuda.empty_cache()
-        if self.__test:
-            print(f'### New recalibrated function a={a} and b={b} (weight={new_weight})')
+        self.__frame_list.clear()
         # reset / stop recali
-        self.__continue_recalibration = False
+        if not self.continues_recalibration: # haha yes logic #BrrrrrrrrrrrrrrrrrrrrainRot
+            self.__continue_recalibration = False
         self.__reclaibration_list_size = 0
         self.__clear_images__in_folder(folder=self.__recalibration_image_folder)
 
@@ -248,20 +292,23 @@ class MagicFrameProcessor:
 
             poly = Polygon([[hc[0]-upper_local_ppm, upper_point], [hc[0]+upper_local_ppm, upper_point], [
                            hc[0]+lower_local_ppm, lower_point], [hc[0]-lower_local_ppm, lower_point]])
+            if not poly.is_valid:
+                continue
             density = 0
             for ohc in head_chords:
                 p_ohc = Point(*ohc)
                 if poly.contains(p_ohc):
                     density += 1
 
-            if density >= 3:
+            if density >= 4:
                 trigger_points.append(poly)
         return trigger_points
 
     def __show_heads(self, frame: np.ndarray, points: List[List[float]]):
+        img_to_draw = frame
         for p in points:
             img_to_draw = cv2.circle(
-                frame, (int(p[0]), int(p[1])), int(2), (0, 0, 255), -1)
+                frame, (int(p[0]), int(p[1])), int(2), (255, 0, 255), -1)
         return img_to_draw
 
     def __create_squares(self, frame, head_coords: List[List[float]]):
@@ -326,25 +373,52 @@ class MagicFrameProcessor:
             overlay = np.where(alpha == 255, bgr, frame)
             return overlay
         return heatmap
+    
+USE_TEST_V = 'Expriment_1_480p_no_square_people'
 
+def gogovideo(cap,write_video,force_heigth,video_extra=''):
+    tick = 0
+    output_video = None
+    try:
+        while True:
+            success, frame = cap.read()
+            tick += 1
+            if success:
+                if tick % tickmod == 0:
+                    tick = 0
+                    trigger, count, img = magic.process(frame=frame)
+
+                    if write_video:
+                        if not output_video:
+                            output_video = cv2.VideoWriter(f"output_videos/{USE_TEST_V}_{force_heigth}{video_extra}.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30.0, (img.shape[1],img.shape[0]))
+                        output_video.write(img)
+                    # else:
+                        # cv2.imshow("YOLOv8 Inference", img)
+                        # if cv2.waitKey(1) & 0xFF == ord("q"):
+                            # break
+            else:
+                # Break the loop if the end of the video is reached
+                break
+    finally:
+        cap.release()
+        if output_video:
+            output_video.release()
+            print("successful save")
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
-    magic = MagicFrameProcessor(test=True)
-    tick = 0
-    while True:
-        success, frame = cap.read()
-        tick += 1
-        if success:
-            if tick % 5 == 0:
-                tick = 0
-                trigger, count, img = magic.process(frame=frame)
+    test = False
+    write_video = True
+    tickmod = 5
+    force_heigth = 184
+    recalif = 200
+    metrics = True
+    keep_recali = True
 
-                cv2.imshow("YOLOv8 Inference", img)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
-        else:
-            # Break the loop if the end of the video is reached
-            break
-    cap.release()
-    cv2.destroyAllWindows()
+    cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
+    magic = MagicFrameProcessor(test=test, force_height=force_heigth, frames_for_recalibration=recalif, show_metrics=metrics, continues_recalibration=keep_recali)
+    
+    gogovideo(cap=cap,force_heigth=force_heigth,write_video=False,video_extra='_200f_double')
+    #magic.continues_recalibration = False
+    #cap = cv2.VideoCapture(test_vids[USE_TEST_V]['path'])
+    #gogovideo(cap=cap,write_video=write_video,force_heigth=force_heigth,video_extra='_200f_double')

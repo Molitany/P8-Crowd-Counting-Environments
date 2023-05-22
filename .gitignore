@@ -447,3 +447,6 @@ img.jpg
 #YOLO
 yolov8n.pt
 bus.jpg
+
+output_videos
+Experiment*.mp4
