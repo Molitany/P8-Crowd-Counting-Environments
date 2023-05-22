@@ -78,7 +78,7 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
         print("Client Disconnected")
 
-def P2P2():
+def frame_processing_handler():
     cap = cv2.VideoCapture(0)
     magic = MagicFrameProcessor()
     # Only for testing purposes remove later
@@ -117,11 +117,11 @@ def P2P2():
 
 executor = ThreadPoolExecutor()
 # chedules the function to run in a different thread
-def start_P2P():
+def start_frame_processing():
     try:
     # Execute the p2p function asynchronously and return a future object
-        executor.submit(P2P)
+        executor.submit(frame_processing_handler)
     finally: #currently this does nothing. Hoped to fix the thread not terminating on MacOS.
         executor.shutdown(False)
 # Start the seperate thread with the P2P function
-start_P2P()
+start_frame_processing()
